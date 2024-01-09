@@ -20,10 +20,24 @@ function newLight(position, color)
     return light
 end
 
+function changeMaterialTexture(meshes, texture, color)
+    local foundMeshes = ac.findMeshes(meshes)
 
+    ac.console("Change Material texture begin")
+    ac.console(foundMeshes)
+    if type(foundMeshes) == "table" then
+        for _, mesh in ipairs(foundMeshes) do
+      mesh:setMaterialTexture(texture, color)
+    end
+    elseif foundMeshes then
+        foundMeshes:setMaterialTexture(texture, color)
+  end
+end
 
 function newColorController(id, label, color, meshName, texture)
+  local pickedColor = nil
     local window = ui.childWindow(id, vec2(ui.availableSpaceX(), 100), function()
+        
         ui.offsetCursorY(30)
 
         ui.columns(3, true, "cols")
@@ -32,11 +46,11 @@ function newColorController(id, label, color, meshName, texture)
 
         ui.nextColumn()
 
-        ac.debug("id", id)
-        ac.debug("label", label)
-        ac.debug("color", color)
-        ac.debug("meshNames", meshName)
-        ac.debug("texture", texture)
+        --ac.debug("id", id)
+        --ac.debug("label", label)
+        --ac.debug("color", color)
+        --ac.debug("meshNames", meshName)
+        --ac.debug("texture", texture)
 
         
 
@@ -57,7 +71,7 @@ function newColorController(id, label, color, meshName, texture)
         ui.nextColumn()
 
         if meshName ~= "" then
-            ui.colorButton(label, color,
+            pickedColor = ui.colorButton(label, color,
                 ui.ColorPickerFlags.PickerHueBar + ui.ColorPickerFlags.NoAlpha + ui.ColorPickerFlags.NoSidePreview)
         else
             ui.text("Enter mesh name to enable color picker")
@@ -65,10 +79,14 @@ function newColorController(id, label, color, meshName, texture)
 
         ui.nextColumn()
 
+        if pickedColor ~= nil then
+            ui.text(pickedColor)
+        end
+        
 
         ui.offsetCursorY(40)
     end)
-    return window
+    return pickedColor
 end
 
 function addColorController(id, label, color, meshName, texture)
@@ -80,11 +98,11 @@ function addColorController(id, label, color, meshName, texture)
         meshNames = meshName,
         texture = texture
     }
-        ac.debug("id", id)
-        ac.debug("label", label)
-        ac.debug("color", color)
-        ac.debug("meshNames", meshName)
-        ac.debug("texture", texture)
+        --ac.debug("id", id)
+        --ac.debug("label", label)
+        --ac.debug("color", color)
+        --ac.debug("meshNames", meshName)
+        --ac.debug("texture", texture)
 
         if meshName == nil then
             meshName = ""
@@ -94,10 +112,10 @@ function addColorController(id, label, color, meshName, texture)
         local meshes = ac.findMeshes(meshName)
         if type(meshes) == "table" then
             for _, mesh in ipairs(meshes) do
-                mesh:setMaterialTexture(texture, color:rgbm(1))
+                mesh:setMaterialTexture(texture, color)
             end
         elseif meshes then
-            meshes:setMaterialTexture(texture, color:rgbm(1))
+            meshes:setMaterialTexture(texture, color)
         end
 
     if meshName ~= "" then
