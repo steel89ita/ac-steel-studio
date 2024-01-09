@@ -1,0 +1,97 @@
+
+
+-- get CSP version
+__CSP_version = 0
+if ac['getPatchVersionCode'] ~= nil then __CSP_version = ac.getPatchVersionCode() end
+
+ac.debug("Test")
+
+ac.debug("encrypted key", web.encryptKey("Test123"))
+
+local studio_color_new = rgb(50, 240, 240)
+local lights_color_new = rgb(50, 240, 240)
+local top_color_new = rgb(50, 240, 240)
+
+local top_meshes = {
+    "Light_Top_SUB0",
+    "Light_Top_SUB1",
+    "Light_Top_SUB2",
+    "Light_Top_SUB3",
+    "Light_Top_SUB4",
+    "Light_Top_SUB5"
+}
+
+local studio_color_label = "Studio Background"
+
+function get__dirname()
+    if ac.dirname then
+        return ac.dirname()
+    else
+        return "assettocorsa\\extension\\weather\\pure"
+    end
+end
+
+__SteelStudio_path = ac.dirname()
+
+
+
+local function Main()
+    
+    ui.text('TAB 1')
+    ui.text('physics late: '..ac.getSim().physicsLate)
+    ui.text('CPU occupancy: '..ac.getSim().cpuOccupancy)
+    ui.text('CPU time: '..ac.getSim().cpuTime)
+    
+    ui.text(string.format('Pure config v%.2f, Parameters: %.0f, CSP: %s', version, pureConfigUI.connectCount, ac.getPatchVersion()))
+    ui.separator()
+end
+
+local function newColorController(id, label, color, mesh, texture)
+    local window = ui.childWindow(id, vec2(ui.availableSpaceX(), 100), function()
+        ui.offsetCursorY(30)
+
+        ui.columns(3, true, "cols")
+
+        ui.text(label)
+
+        ui.nextColumn()
+
+        ui.colorButton(label, color,
+            ui.ColorPickerFlags.PickerHueBar + ui.ColorPickerFlags.NoAlpha + ui.ColorPickerFlags.NoSidePreview)
+			
+		ui.nextColumn()
+		
+		local iMesh = ui.inputText('Mesh:', myText)
+        
+
+        if type(mesh) == "table" then
+            ac.debug("Table")
+        end
+
+        if (color) then
+            ac.findMeshes(iMesh):setMaterialTexture(texture, color:rgbm(1)) -- metal_detail.dds
+        end
+        ui.offsetCursorY(40)
+    end)
+    return window
+end
+
+
+function windowMain(dt)
+
+    ac.debug("studio_color", studio_color_new)
+	
+	ui.text("TESTO DI PROVA")
+	ui.separator()
+    
+	
+    local myText = ui.inputText('Enter something:', myText)
+    
+    newColorController("studiobkg", "Studio Background", studio_color_new, "Plane.001", 'txDiffuse')
+
+    newColorController("lightscol", "Lights Color", lights_color_new, "Set_Light_Spot.003_SUB1", 'txDiffuse')
+	
+    newColorController("topcol", "Top Color", top_color_new, top_meshes, 'txDiffuse')
+	
+
+end

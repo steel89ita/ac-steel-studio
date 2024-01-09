@@ -1,0 +1,274 @@
+local sim = ac.getSim()
+local light = nil ---@type ac.LightSource?
+local alignOnce = true
+
+
+-- get CSP version
+__CSP_version = 0
+if ac['getPatchVersionCode'] ~= nil then __CSP_version = ac.getPatchVersionCode() end
+
+ac.debug("Test")
+
+ac.debug("encrypted key", web.encryptKey("Test123"))
+
+local storage = ac.storage({
+  color = rgb(0.6, 0.9, 1),
+  brightness = 10,
+  spot = 45,
+  sharpness = 0.9,
+  range = 10,
+  align = true
+})
+
+local colorControllers = {
+    {
+        meshNames = {"Plane.001"},
+        color = rgb(50, 240, 240),
+        texture = 'txDiffuse',
+        label = 'Color Controller 1'
+    },
+    {
+        meshNames = {"Set_Light_Spot.002_SUB1", "Set_Light_Spot.001_SUB1"},
+        color = rgb(50, 240, 240),
+        texture = 'txDiffuse',
+        label = 'Color Controller 2'
+    },
+    {
+        meshNames = {"Light_Top_SUB0"},
+        color = rgb(50, 240, 240),
+        texture = 'txDiffuse',
+        label = 'Color Controller 3'
+    }
+}
+
+local lights =  {
+	{
+        position = 3.433, 0.779, -3.728,
+        color = 10, 0, 100
+    }
+    --[[ {
+        position = -3.077, 1.475, -10.197,
+        color = 10, 10, 0
+    } ]]
+    
+}
+
+
+local loadedLights = nil
+
+--[[ local light1 = ac.LightSource(ac.LightType.Regular)
+light1.position = vec3(-3.077, 1.475, -10.197)
+light1.direction = vec3(0, 0, 1)
+light1.spot = 0
+light1.spotSharpness = 0.99
+light1.color = rgb(10, 10, 0)
+light1.range = 10
+light1.shadows = true
+light1.fadeAt = 500
+light1.fadeSmooth = 200 ]]
+
+
+
+local carName = ac.getCarName(0)
+local currentSkin = ac.getCarSkinID(0)
+
+ac.debug("car name", carName)
+ac.debug("car skin", currentSkin)
+
+local currentSkinPath = "content/cars/" .. carName .. "/skins/" .. currentSkin .. "/_preview.dds"
+ac.debug("current skin path", currentSkinPath)
+
+local meshes = ac.findMeshes('carsRoot:yes')
+for i, mesh in ipairs(meshes) do
+    ac.debug("mesh" .. i, mesh.name)
+end
+
+-- Use the Assetto Corsa Lua API to get the texture object for the current skin
+
+
+function get__dirname()
+    if ac.dirname then
+        return ac.dirname()
+    else
+        return "assettocorsa\\extension\\weather\\pure"
+    end
+end
+
+__SteelStudio_path = ac.dirname()
+
+
+local function Main()
+    
+    ui.text('TAB 1')
+    ui.text('physics late: '..ac.getSim().physicsLate)
+    ui.text('CPU occupancy: '..ac.getSim().cpuOccupancy)
+    ui.text('CPU time: '..ac.getSim().cpuTime)
+    
+    ui.text(string.format('Pure config v%.2f, Parameters: %.0f, CSP: %s', version, pureConfigUI.connectCount, ac.getPatchVersion()))
+    ui.separator()
+	
+	
+end
+
+local function newColorController(id, label, color, meshName, texture)
+    local window = ui.childWindow(id, vec2(ui.availableSpaceX(), 100), function()
+        ui.offsetCursorY(30)
+
+        ui.columns(3, true, "cols")
+
+        ui.text(label)
+
+        ui.nextColumn()
+		
+		 ac.debug("id", id)
+		 ac.debug("label", label)
+		 ac.debug("color", color)
+		 ac.debug("meshNames", meshName)
+		 ac.debug("texture", texture)
+
+        if meshName == nil then
+            meshName = ""
+        end
+        meshName = ui.inputText('Mesh:', meshName)
+
+        local meshes = ac.findMeshes(meshName)
+        if type(meshes) == "table" then
+            for _, mesh in ipairs(meshes) do
+                mesh:setMaterialTexture(texture, color:rgbm(1))
+            end
+        elseif meshes then
+            meshes:setMaterialTexture(texture, color:rgbm(1))
+        end
+
+        ui.nextColumn()
+
+        if meshName ~= "" then
+            ui.colorButton(label, color,
+                ui.ColorPickerFlags.PickerHueBar + ui.ColorPickerFlags.NoAlpha + ui.ColorPickerFlags.NoSidePreview)
+        else
+            ui.text("Enter mesh name to enable color picker")
+        end
+
+        ui.nextColumn()
+
+
+        ui.offsetCursorY(40)
+    end)
+    return window
+end
+
+local function newLight(position, color)
+    local light = ac.LightSource(ac.LightType.Regular)
+	light.position = vec3(position)
+	light.direction = vec3(0, 0, 1)
+	light.spot = 0
+	light.spotSharpness = 0.99
+	light.color = rgb(color)
+	light.range = 10
+	light.shadows = true
+	light.fadeAt = 500
+	light.fadeSmooth = 200
+    return light
+end
+
+
+function addColorController()
+    table.insert(colorControllers, {
+        id = #colorControllers + 1,
+        label = "Color Controller " .. #colorControllers + 1,
+        color = rgb(50, 240, 240),
+        meshName = "",
+        texture = 'txDiffuse'
+    })
+end
+
+function removeColorController(id)
+    for i, controller in ipairs(colorControllers) do
+        if controller.id == id then
+            table.remove(colorControllers, i)
+            break
+        end
+    end
+end
+
+
+
+
+function script.windowMain(dt)
+
+    ac.debug("studio_color", studio_color_new)
+	
+	--ui.text("TESTO DI PROVA")
+	ui.separator()
+    
+	for i, controller in ipairs(colorControllers) do
+	
+        local window = newColorController("colorController" .. i, controller.label, controller.color, controller.meshNames, controller.texture)
+        if ui.button("Remove " .. controller.label) then
+            removeColorController(controller.id)
+        end
+    end
+	
+	    --[[ for i, light in ipairs(lights) do
+    
+        local window = newLight(light.position, light.color)
+    end ]]
+    
+    if(loadedLights == nil) then 
+        for i, light in ipairs(lights) do
+            loadedLights = newLight(light.position, light.color)
+        end
+    end
+
+    if ui.button("Add Color Controller") then
+        addColorController()
+    end
+	
+    --local myText = ui.inputText('Enter something:', myText)
+	
+	
+    if ui.button("Add Color Controller") then
+        addColorController()
+    end
+	
+	
+	
+	local light2 = ac.findNodes('LIGHT_SERIES_0')
+	ac.debug("light2", type(light2))
+	if type(light2) == "table" then
+            for _, mesh in ipairs(meshes) do
+                ac.debug(mesh, mesh)
+            end
+        end
+		
+		
+	--light2.color = rgb(10, 10, 0)
+	--used to customize light1 color
+	ui.colorButton(label, light1.color,
+                ui.ColorPickerFlags.PickerHueBar + ui.ColorPickerFlags.NoAlpha + ui.ColorPickerFlags.NoSidePreview)
+    
+    --newColorController("idcolor1", "Color 1", color1, "mesh1", 'txDiffuse')
+
+    --newColorController("idcolor2", "Color 2", color2, "mesh2", 'txDiffuse')
+	
+    --newColorController("idcolor3", "Color 3", color3, mesh3, 'txDiffuse')
+	
+
+end
+
+function script.onHideWindowMain()
+  if light then
+    alignOnce = true
+    light:dispose()
+    light = nil
+  end
+end
+
+
+function script.update(dt)
+  if light and (storage.align or alignOnce) then
+    light.position:set(sim.cameraPosition):addScaled(sim.cameraLook, 0.1)
+    light.direction:set(sim.cameraLook)
+    alignOnce = false
+  end
+end
