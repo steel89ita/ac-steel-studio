@@ -6,7 +6,7 @@ local json = require('lib/json')
 sim = ac.getSim()
 car = ac.getCar(sim.focusedCar)
 
-
+local frame = 1
 
 local light = nil ---@type ac.LightSource?
 local alignOnce = true
@@ -45,39 +45,76 @@ local colorControllers = {
 
 local storage = ac.storage{
     defaultColor = rgb(0.6, 0.9, 1),
-  hideCrew = true
+    hideCrew = false,
+  hideDrivers = false
 }
 
 
 local function initializeUI()
+    ac.console("Initializing UI" .. frame)
 
+    ui.text("TEST")
 
-  
-  
-
-  return ui.checkbox('Initialized', true)
+    if ui.checkbox('UI TEST', storage.hideCrew) then
+        storage.hideCrew = not storage.hideCrew
+    end
 end
 
-function script.windowMain(dt)
-    
 
-    if not initializedUI then 
+local function welcomeTab()
+    ui.text('Welcome!')
+end
 
-      local window = initializeUI()
 
-      initializedUI = true
-    end
-  
+local function themesTab()
+    ui.text('Themes')
+end
+
+
+local function backgroundsTab()
+    ui.text('physics late: ' .. ac.getSim().physicsLate)
+    ui.text('CPU occupancy: ' .. ac.getSim().cpuOccupancy)
+    ui.text('CPU time: ' .. ac.getSim().cpuTime)
+end
+
+
+local function teleportCar(position, direction)
+        local customCarPosition = vec3(position)
+        local customCarDirection = -vec3(direction)
+        TeleportTimer = setInterval(function()
+        physics.setCarPosition(0, customCarPosition, customCarDirection)
+            clearInterval(TeleportTimer)
+    end)
+end
+
+local function teleportTab()
+    ui.text('TAB 2')
 
     local carPosition = car.position
-    ac.debug("car direction", ac.getSim().cameraLook)
+    local carLook = car.look
+    local carSteer = car.steer
+    ac.debug("camera direction", ac.getSim().cameraLook)
     ac.debug("car position", carPosition)
-  
-    
+    ac.debug("car look", carLook)
+    ac.debug("car steer", carSteer)
 
 
-    local clickToTeleport
+    if ui.button('Teleport 1') then teleportCar(vec3(54.07, 7.92154, -32.5626), vec3(0.0481339, -0.165144, 0.985094)) end
+    if ui.button('Teleport 2') then teleportCar(vec3(13.0424, 1.69585, 18.6731), vec3(-0.630298, -0.41161, -0.658256)) end
+
+
+    if ui.button('Flip Car Direction') then teleportCar(carPosition, -carLook) end
     
+        --[[ local customCarPosition = vec3(54.07, 7.92154, -32.5626)
+        local customCarDirection = -vec3(0.0481339, -0.165144, 0.985094)
+        clickToTeleport = setInterval(function()
+            physics.setCarPosition(0, customCarPosition, customCarDirection)
+
+            clearInterval(clickToTeleport)
+        end) ]]
+
+        --[[ local clickToTeleport
+
 
     local customCarPosition = vec3(54.07, 7.92154, -32.5626)
     local customCarDirection = -vec3(0.0481339, -0.165144, 0.985094)
@@ -92,24 +129,81 @@ function script.windowMain(dt)
             clickToTeleport = nil
             teleported = true
         end)
-    end
+    end ]]
     
-    mesh = ac.findNodes('?Meccanico_PALETTA?')
+end
+
+
+
+
+local function extrasTab()
+    ui.text('EXTRA')
 
     
+    local crew = ac.findNodes('?Meccanico_PALETTA?')
+    local drivers = ac.findNodes('?DRIVER?')
 
     
-
-
-
     if ui.checkbox('Hide Pit Crew', storage.hideCrew) then
         storage.hideCrew = not storage.hideCrew
     end
 
-    if storage.hideCrew then
-        mesh:setVisible(false)
-    else mesh:setVisible(true)
+    if ui.checkbox('Hide Drivers', storage.hideDrivers) then
+        storage.hideDrivers = not storage.hideDrivers
     end
+
+    if storage.hideCrew then
+        crew:setVisible(false)
+    else
+        crew:setVisible(true)
+    end
+
+     if storage.hideDrivers then
+        drivers:setVisible(false)
+    else
+        drivers:setVisible(true)
+    end
+    
+end
+
+function script.windowMain(dt)
+    
+  
+
+
+  
+
+    ui.beginOutline()
+      
+
+
+
+
+    ui.tabBar('someTabBarID', function()
+      ui.tabItem('Welcome', welcomeTab)
+      ui.tabItem('Themes', themesTab)
+        ui.tabItem('Backgrounds', backgroundsTab)
+        ui.tabItem('Teleport', teleportTab)
+    ui.tabItem('Extra', extrasTab)
+    end)
+  
+
+    ui.endOutline(rgbm(0, 0, 0, ac.windowFading()), 1)
+
+
+  
+
+    
+    
+    
+
+    
+    
+    
+
+
+
+    
 
 
     --[[ if checkCrew == true then
@@ -136,7 +230,7 @@ function script.windowMain(dt)
   
   --ui.beginGroup(ui.availableSpaceX() - 24)
   
-  ac.console(colorControllers[1].color)
+  --ac.console(colorControllers[1].color)
 
 
   --local newColor = storage.defaultColor:clone()
@@ -189,8 +283,9 @@ function script.windowMain(dt)
         if (initializedBackgrounds == false ) then
           
 for i, bkg in ipairs(records.backgrounds) do
-          ac.console(i)
+          --ac.console(i)
             local r, g, b, m = string.match(bkg.color, '([%d.]+), ([%d.]+), ([%d.]+), ([%d.]+)')
+            
           ac.debug("r", r)
         ac.debug("g", g)
         ac.debug("b", b)
@@ -246,15 +341,32 @@ for i, bkg in ipairs(records.backgrounds) do
                 removeColorController(controller.id)
             end ]]
         --if window
-        ac.console(window)
+        --ac.console(window)
     end
     
         
     ui.pushItemWidth(ui.availableSpaceX())
   
+    frame = frame + 1
 end
 
+
+function script.onShowWindowMain()
+
+    ac.console("Opened App, here initialize it")
+  initializeUI()
+    --[[ if light then
+    alignOnce = true
+    light:dispose()
+    light = nil
+  end ]]
+    --storage.initializedBackgrounds = false
+end
+
+
 function script.onHideWindowMain()
+
+  ac.console("Closed app")
       --[[ if light then
     alignOnce = true
     light:dispose()
@@ -263,10 +375,11 @@ function script.onHideWindowMain()
   --storage.initializedBackgrounds = false
 end
 
-function script.update(dt)
+--function script.update(dt)
+  --ac.console("UPDATE")
   --[[ if light and (storage.align or alignOnce) then
     light.position:set(sim.cameraPosition):addScaled(sim.cameraLook, 0.1)
     light.direction:set(sim.cameraLook)
     alignOnce = false
   end ]]
-end
+--end
