@@ -3,15 +3,15 @@ require('helpers/helpers')
 local json = require('lib/json')
 
 -------------------------------- Initializing --------------------------------
-sim = ac.getSim()
-car = ac.getCar(sim.focusedCar)
+sim = ac.getSim() ---@type ac.StateSim
+car = ac.getCar(sim.focusedCar) or ac.getCar(0) ---@type ac.StateCar?
 
 local steelConfig = "steelstudio.json"
 
 trackPath = ac.getFolder(ac.FolderID.ContentTracks) .. "\\" .. ac.getTrackID()
 steelStudioPath = trackPath .. "\\extension\\" .. steelConfig
 
-foundSteelstudioConf = nil
+local foundSteelstudioConf = nil ---@type boolean?
 
 
 ---- CAR VALUES ---
@@ -21,10 +21,25 @@ carLook = car.look
 carSteer = car.steer
 
 
+startPosition = nil
+startLook = nil
 --local skinDir = ac.getFolder(ac.FolderID.ContentCars) .. '/' .. ac.getCarID(0) .. '/skins/my_skin'
 
--------------------------------- To be decided --------------------------------
 
+
+---- MESHES: CREW AND DRIVERS ----
+
+crew = ac.findNodes('?Meccanico_PALETTA?')
+drivers = ac.findNodes('?DRIVER?')
+
+
+
+
+
+---- UI PREFERENCES ----
+
+
+-------------------------------- To be decided --------------------------------
 
 local frame = 1
 
@@ -42,50 +57,27 @@ local teleported = false
 
 local configBackgrounds = {}
 
-local colorControllers = {
-  {
-    meshNames = { "Plane.001" },
-    color = rgbm(0, 0.9, 0.1, 1.0),
-    texture = 'txDiffuse',
-    label = 'Plane'
-  },
-  {
-    meshNames = { "Set_Light_Spot.002_SUB1", "Set_Light_Spot.001_SUB1", "Set_Light_Spot.004_SUB1", "Set_Reflected_Light_Big_SUB2", "Set_Light_Spot.003_SUB1" },
-    color = rgbm(0, 10, 240, 1.0),
-    texture = 'txDiffuse',
-    label = 'Spot Lights'
-  },
-  {
-    meshNames = { "Light_Top_SUB0", "Light_Top_SUB1", "Light_Top_SUB2", "Light_Top_SUB3", "Light_Top_SUB4", "Light_Top_SUB5" },
-    color = rgbm(10, 240, 0, 1.0),
-    texture = 'txDiffuse',
-    label = 'Lights Top'
-  }
-}
-
+-- Storage data - not relative to track customizations
 local storage = ac.storage {
   defaultColor = rgb(0.6, 0.9, 1),
   hideCrew = false,
-  hideDrivers = false
+  hideDrivers = false,
+  colorPickerType = ui.ColorPickerFlags.PickerHueBar
 }
 
 
 
-local function initializeUI()
-  ac.console("Initializing UI" .. frame)
+local function setStorageSettings()
+  ac.console("Steel Studio: Applying Saved Storage Settings")
 
-  
+  if storage.hideCrew then crew:setVisible(false) end
+  if storage.hideDrivers then drivers:setVisible(false) end
 
-  ui.text("TEST")
-
-  if ui.checkbox('UI TEST', storage.hideCrew) then
-    storage.hideCrew = not storage.hideCrew
-  end
 end
 
 function script.onShowWindowMain()
   ac.console("Opened App, here initialize it")
-  initializeUI()
+  setStorageSettings()
 
 
 
@@ -110,9 +102,9 @@ end
 local function themesTab()
   ui.text('Themes')
 
-  
+  ui.textWrapped('To be implemented. The idea of "Themes" is a collection of backgrounds, car positions and possibly other stuff.')
 
-  
+  --[[ 
   if ui.button('change color') then
     changeMaterialTexture("01ROAD_FLOOR", "txDiffuse", rgbm(0.55, 0.27, 0.44, 1.0))
     changeMaterialTexture("Cube.010", "txDiffuse", rgbm(0.25, 0.57, 0.44, 1.0))
@@ -120,16 +112,17 @@ local function themesTab()
   end
 
   if ui.button('change color2') then
-    changeMaterialTexture("01ROAD_FLOOR", "txDiffuse", rgbm(0.15, 0.57, 0.24, 1.0))
-    changeMaterialTexture("Cube.010", "txDiffuse", rgbm(0.35, 0.37, 0.64, 1.0))
-    changeMaterialTexture("Cube.011", "txDiffuse", rgbm(0.65, 0.67, 0.64, 1.0))
+    configBackgrounds[1].color = rgbm(0.15, 0.57, 0.24, 1.0)
+    --changeMaterialTexture("01ROAD_FLOOR", "txDiffuse", rgbm(0.15, 0.57, 0.24, 1.0))
+    --changeMaterialTexture("Cube.010", "txDiffuse", rgbm(0.35, 0.37, 0.64, 1.0))
+    --changeMaterialTexture("Cube.011", "txDiffuse", rgbm(0.65, 0.67, 0.64, 1.0))
   end
 
   if ui.button('random color') then
     changeMaterialTexture("01ROAD_FLOOR", "txDiffuse", rgbm(math.random(), math.random(), math.random(), 1.0))
     changeMaterialTexture("Cube.010", "txDiffuse", rgbm(math.random(), math.random(), math.random(), 1.0))
     changeMaterialTexture("Cube.011", "txDiffuse", rgbm(math.random(), math.random(), math.random(), 1.0))
-  end
+  end ]]
 
 end
 
@@ -154,9 +147,14 @@ local function backgroundsTab()
 
     --rgbm(tonumber(r), tonumber(g), tonumber(b), tonumber(m))
     local window = addColorController("colorController" .. i, controller.label, controller.color,
-      controller.meshNames, controller.texture)
+      controller.meshNames, controller.texture, storage.colorPickerType)
 
-    ac.debug("picked color", window)
+  
+        ac.debug("picked color", window)
+  
+
+    
+
     --[[ if ui.button("Remove " .. controller.label) then
                 removeColorController(controller.id)
             end ]]
@@ -165,6 +163,11 @@ local function backgroundsTab()
   end
   
 
+  if ui.button("Shuffle Palette") then
+    for i, obj in ipairs(configBackgrounds) do
+      configBackgrounds[i].color = rgbm(math.random(), math.random(), math.random(), 1.0)
+    end
+  end
   
 
 
@@ -187,9 +190,14 @@ local function teleportTab()
   
 
 
+  
   if ui.button('Teleport 1') then teleportCar(vec3(54.07, 7.92154, -32.5626), vec3(0.0481339, -0.165144, 0.985094)) end
   if ui.button('Teleport 2') then teleportCar(vec3(13.0424, 1.69585, 18.6731), vec3(-0.630298, -0.41161, -0.658256)) end
 
+
+  if ui.button('Teleport to Starting Line') then physics.teleportCarTo(0, ac.SpawnSet.Start) end
+  if ui.button('Teleport to Hotlap Start') then physics.teleportCarTo(0, ac.SpawnSet.HotlapStart) end
+  if ui.button('Teleport to Pits') then physics.teleportCarTo(0, ac.SpawnSet.Pits) end
 
   if ui.button('Flip Car Direction') then teleportCar(carPosition, -carLook) end
 
@@ -243,8 +251,7 @@ local function extrasTab()
   ui.text('EXTRA')
 
 
-  local crew = ac.findNodes('?Meccanico_PALETTA?')
-  local drivers = ac.findNodes('?DRIVER?')
+  
 
 
   if ui.checkbox('Hide Pit Crew', storage.hideCrew) then
@@ -324,6 +331,7 @@ function script.windowMain(dt)
   debugger()
 
 
+
   tryOpenSteelStudioConf()
 
 
@@ -332,6 +340,10 @@ function script.windowMain(dt)
 
 
 
+  -- used to set background colors across all tabs according to configBackgrounds
+  for i, item in ipairs(configBackgrounds) do
+    changeMaterialTexture(item.meshNames, item.texture, item.color)
+  end
 
 
   ui.tabBar('someTabBarID', function()
@@ -346,16 +358,6 @@ function script.windowMain(dt)
 
 
   ui.endOutline(rgbm(0, 0, 0, ac.windowFading()), 1)
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -456,6 +458,27 @@ function script.onHideWindowMain()
     light = nil
   end ]]
   --storage.initializedBackgrounds = false
+end
+
+
+function script.windowMainSettings(dt)
+  ui.text('UI Preferences')
+
+  ui.text('Color Picker Type')
+
+  if ui.button("Hue Wheel", vec2(0,0), ui.ButtonFlags.Activable) then
+    if storage.colorPickerType == ui.ColorPickerFlags.PickerHueBar then
+      storage.colorPickerType = ui.ColorPickerFlags.PickerHueWheel
+    else
+      storage.colorPickerType = ui.ColorPickerFlags.PickerHueBar
+    end
+  end
+
+  --[[ ui.childWindow('scrolling', vec2(200, 400), function()
+    for i = 1, 1000 do
+      ui.text('Row ' .. i)
+    end
+  end) ]]
 end
 
 --function script.update(dt)

@@ -89,40 +89,61 @@ function newColorController(id, label, color, meshName, texture)
     return pickedColor
 end
 
-function addColorController(id, label, color, meshName, texture)
+function addColorController(inputId, inputLabel, inputColor, inputMeshName, inputTexture, colorPickerType)
     
     local controller = {
-        id = id,
-        label = label,
-        color = color,
-        meshNames = meshName,
-        texture = texture
-    }
+        id = inputId,
+        label = inputLabel,
+        color = inputColor,
+        meshNames = inputMeshName,
+        texture = inputTexture
+  }
+    
+
+    local pickerType = colorPickerType or ui.ColorPickerFlags.PickerHueBar
         --ac.debug("id", id)
         --ac.debug("label", label)
         --ac.debug("color", color)
         --ac.debug("meshNames", meshName)
         --ac.debug("texture", texture)
 
-        if meshName == nil then
-            meshName = ""
+
+        ui.offsetCursorY(12)
+
+  ui.beginGroup(200)
+        
+    ui.setNextItemWidth((ui.availableSpaceX() - 12) / 2)
+
+  ui.text(tostring(controller.label))
+
+  ui.sameLine(0, 12)
+
+    ui.setNextItemWidth(ui.availableSpaceX())
+        
+    if inputMeshName == nil then
+            controller.meshNames = ""
         end
         --meshName = ui.inputText('Mesh:', meshName)
 
-        local meshes = ac.findMeshes(meshName)
+        
+    local meshes = ac.findMeshes(controller.meshNames)
         if type(meshes) == "table" then
             for _, mesh in ipairs(meshes) do
-                mesh:setMaterialTexture(texture, color)
+                mesh:setMaterialTexture(controller.texture, controller.color)
             end
         elseif meshes then
-            meshes:setMaterialTexture(texture, color)
+        meshes:setMaterialTexture(controller.texture, controller.color)
         end
 
-    if meshName ~= "" then
-        controller.color = ui.colorButton(label, color,
-            ui.ColorPickerFlags.PickerHueBar + ui.ColorPickerFlags.NoAlpha + ui.ColorPickerFlags.NoSidePreview)
-    end
+    if controller.meshNames ~= "" then
+        ui.colorButton(controller.label, controller.color,
+            pickerType + ui.ColorPickerFlags.NoAlpha + ui.ColorPickerFlags.NoSidePreview)
+
         
+    end
+  
+    ui.endGroup()
+
     return controller
 end
 
