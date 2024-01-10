@@ -4,7 +4,21 @@ function scale(value)
     return LBS * value
 end
 
-
+-- deepcopy to copy tables and remove references
+function deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
 
 function newLight(position, color)
     local light = ac.LightSource(ac.LightType.Regular)
@@ -18,6 +32,17 @@ function newLight(position, color)
 	light.fadeAt = 500
 	light.fadeSmooth = 200
     return light
+end
+
+
+function newBackground(meshNames, color, texture, label)
+    local background = {
+        meshNames = { "Plane.001" },
+        color = rgbm(0, 0.9, 0.1, 1.0),
+        texture = 'txDiffuse',
+        label = label
+    }
+    return background
 end
 
 function changeMaterialTexture(meshes, texture, color)

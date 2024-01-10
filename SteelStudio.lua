@@ -33,15 +33,19 @@ crew = ac.findNodes('?Meccanico_PALETTA?')
 drivers = ac.findNodes('?DRIVER?')
 
 
+---- BACKGROUND VALUES ----
+
+local bkgIdx = 0
 
 
+---- THEME CONFIGURATION ----
 
----- UI PREFERENCES ----
+local theme = {}
 
 
 -------------------------------- To be decided --------------------------------
 
-local frame = 1
+local count = 1
 
 local light = nil ---@type ac.LightSource?
 local alignOnce = true
@@ -99,11 +103,54 @@ local function welcomeTab()
 end
 
 
+
+
+
 local function themesTab()
   ui.text('Themes')
 
   ui.textWrapped('To be implemented. The idea of "Themes" is a collection of backgrounds, car positions and possibly other stuff.')
 
+
+
+
+  --TODO: Clean code
+
+  --TODO: Caveat -  if I select a theme then change colors, they are modified even if I load the theme
+  
+
+  
+  inputstring = ui.inputText("New Theme: ", inputstring, ui.InputTextFlags.Placeholder)
+
+  ui.sameLine(0, 8)
+
+  if ui.button("Save current theme") then
+    theme[inputstring] = deepcopy(configBackgrounds)
+    inputstring = ''
+  end
+
+  ac.debug("input", inputstring)
+
+  for k, item in pairs(theme) do
+    ac.debug("itemKey", k)
+    ac.debug("item", item)
+    if ui.button(k) then
+      configBackgrounds = deepcopy(item)
+    end
+  end
+
+
+  if ui.button("Save Theme") then
+    theme['aaa'] = deepcopy(configBackgrounds)
+  end
+
+
+  if ui.button("Apply theme") then
+    configBackgrounds = theme
+  end
+
+
+  
   --[[ 
   if ui.button('change color') then
     changeMaterialTexture("01ROAD_FLOOR", "txDiffuse", rgbm(0.55, 0.27, 0.44, 1.0))
@@ -134,7 +181,13 @@ local function aboutTab()
 end
 
 
-local function backgroundsTab()
+local function newBkg()
+
+
+  ui.text("New Background")
+end
+
+local function backgroundsTab(dt)
   for i, controller in ipairs(configBackgrounds) do
     --TODO: convert string to rgbm
 
@@ -146,14 +199,15 @@ local function backgroundsTab()
     --ac.debug("m", m)
 
     --rgbm(tonumber(r), tonumber(g), tonumber(b), tonumber(m))
-    local window = addColorController("colorController" .. i, controller.label, controller.color,
+    local window = addColorController("colorController" .. bkgIdx, controller.label, controller.color,
       controller.meshNames, controller.texture, storage.colorPickerType)
 
   
         ac.debug("picked color", window)
   
 
-    
+    -- Increment background index, required for new color controllers created by the app
+    bkgIdx = bkgIdx + 1 
 
     --[[ if ui.button("Remove " .. controller.label) then
                 removeColorController(controller.id)
@@ -162,6 +216,15 @@ local function backgroundsTab()
     --ac.console(window)
   end
   
+  if ui.button("Add new Color Controller") then
+    
+
+    ac.debug("dt", dt)
+    table.insert(configBackgrounds, newBackground("notworking", rgb(0, 0, 0), "notworking", "no-really" .. bkgIdx))
+
+    bkgIdx = bkgIdx + 1
+
+  end
 
   if ui.button("Shuffle Palette") then
     for i, obj in ipairs(configBackgrounds) do
@@ -170,6 +233,7 @@ local function backgroundsTab()
   end
   
 
+  
 
 end
 
@@ -244,6 +308,7 @@ local function debugger()
   ac.debug("config Backgrounds", configBackgrounds)
   ac.debug("Initialized Backgrounds", initializedBackgrounds)
 
+  ac.debug("Theme", theme)
 end
 
 
@@ -329,7 +394,6 @@ function script.windowMain(dt)
 
 
   debugger()
-
 
 
   tryOpenSteelStudioConf()
@@ -445,7 +509,6 @@ function script.windowMain(dt)
 
   ui.pushItemWidth(ui.availableSpaceX())
 
-  frame = frame + 1
 end
 
 
