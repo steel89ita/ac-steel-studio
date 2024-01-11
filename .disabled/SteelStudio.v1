@@ -11,11 +11,8 @@ local steelConfig = "steelstudio.json"
 trackPath = ac.getFolder(ac.FolderID.ContentTracks) .. "\\" .. ac.getTrackID()
 steelStudioPath = trackPath .. "\\extension\\" .. steelConfig
 
-
-
 local foundSteelstudioConf = nil ---@type boolean?
 
-steelStudioData = {}
 
 ---- CAR VALUES ---
 
@@ -79,27 +76,12 @@ local function setStorageSettings()
 
   if storage.hideCrew then crew:setVisible(false) end
   if storage.hideDrivers then drivers:setVisible(false) end
+
 end
 
-local function generateBackgroundsTable(data, targetTable)
-  for i, bkg in ipairs(data) do
-    --ac.console(i)
-    local r, g, b, m = string.match(bkg.color, '([%d.]+), ([%d.]+), ([%d.]+), ([%d.]+)')
-
-    local content = {
-      meshNames = bkg.meshNames,
-      color = rgbm(tonumber(r), tonumber(g), tonumber(b), tonumber(m)),
-      texture = bkg.texture,
-      label = bkg.label
-    }
-
-    table.insert(targetTable, content)
-  end
-end
-
---function script.onShowWindowMain()
-  --ac.console("Opened App, here initialize it")
-  --setStorageSettings()
+function script.onShowWindowMain()
+  ac.console("Opened App, here initialize it")
+  setStorageSettings()
 
 
 
@@ -109,7 +91,7 @@ end
     light = nil
   end ]]
   --storage.initializedBackgrounds = false
---end
+end
 
 local function welcomeTab()
   ui.text('Welcome!')
@@ -157,12 +139,6 @@ local function themesTab()
     end
   end
 
-
-  for k, item in pairs(steelStudioData) do
-    if ui.button(item['theme']) then
-      generateBackgroundsTable(steelStudioData[k].backgrounds, configBackgrounds)
-    end
-  end
 
   if ui.button("Save Theme") then
     theme['aaa'] = deepcopy(configBackgrounds)
@@ -365,7 +341,22 @@ local function extrasTab()
 end
 
 
+local function generateBackgroundsTable(data, targetTable)
+for i, bkg in ipairs(data) do
+        --ac.console(i)
+        local r, g, b, m = string.match(bkg.color, '([%d.]+), ([%d.]+), ([%d.]+), ([%d.]+)')
 
+        local content = {
+          meshNames = bkg.meshNames,
+          color = rgbm(tonumber(r), tonumber(g), tonumber(b), tonumber(m)),
+          texture = bkg.texture,
+          label = bkg.label
+        }
+
+        table.insert(targetTable, content)
+      end
+
+end
 
 local function tryOpenSteelStudioConf()
 
@@ -383,20 +374,12 @@ local function tryOpenSteelStudioConf()
 
 
     -- Parse the json data into a Lua table
-        local records = json.decode(data)
-    
-        steelStudioData = records
-
-        ac.debug(steelStudioData)
-
- 
+    local records = json.decode(data)
 
     if (initializedBackgrounds == false) then
 
-
-            ---- Generate backgrounds table from json records
-      ---- we use the first theme at launch
-      generateBackgroundsTable(records[1].backgrounds, configBackgrounds)
+      ---- Generate backgrounds table from json records
+      generateBackgroundsTable(records.backgrounds, configBackgrounds)
 
 
       initializedBackgrounds = true
