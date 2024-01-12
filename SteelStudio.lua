@@ -43,7 +43,8 @@ local bkgIdx = 0
 
 ---- THEME CONFIGURATION ----
 
-local theme = {}
+local themes = {}
+local currentTheme = {}
 
 
 -------------------------------- To be decided --------------------------------
@@ -97,9 +98,27 @@ local function generateBackgroundsTable(data, targetTable)
   end
 end
 
+local function transformBackgroundTable(data)
+  local result = {}
+  for i, bkg in ipairs(data) do
+    --ac.console(i)
+    local r, g, b, m = string.match(bkg.color, '([%d.]+), ([%d.]+), ([%d.]+), ([%d.]+)')
+
+    local content = {
+      meshNames = bkg.meshNames,
+      color = rgbm(tonumber(r), tonumber(g), tonumber(b), tonumber(m)),
+      texture = bkg.texture,
+      label = bkg.label
+    }
+
+    table.insert(result, content)
+  end
+  return result
+end
+
 --function script.onShowWindowMain()
   --ac.console("Opened App, here initialize it")
-  --setStorageSettings()
+  --
 
 
 
@@ -143,17 +162,19 @@ local function themesTab()
   ui.sameLine(0, 8)
 
   if ui.button("Save current theme") then
-    theme[inputstring] = deepcopy(configBackgrounds)
+    themes[inputstring] = deepcopy(currentTheme)
     inputstring = ''
   end
 
   ac.debug("input", inputstring)
 
-  for k, item in pairs(theme) do
+  for k, item in pairs(themes) do
     ac.debug("itemKey", k)
     ac.debug("item", item)
     if ui.button(k) then
-      configBackgrounds = deepcopy(item)
+      
+      currentTheme = deepcopy(item)
+      
     end
   end
 
@@ -165,12 +186,12 @@ local function themesTab()
   end
 
   if ui.button("Save Theme") then
-    theme['aaa'] = deepcopy(configBackgrounds)
+    themes['aaa'] = deepcopy(configBackgrounds)
   end
 
 
   if ui.button("Apply theme") then
-    configBackgrounds = theme
+    currentTheme.backgrounds[1].color = rgbm(math.random(), math.random(), math.random(), 1.0)
   end
 
 
@@ -212,8 +233,11 @@ local function newBkg()
 end
 
 local function backgroundsTab(dt)
-  for i, controller in ipairs(configBackgrounds) do
-    --TODO: convert string to rgbm
+
+  --TODO: Based on Current theme. If I change values, do I need to save a new theme?
+
+  for i, controller in ipairs(currentTheme.backgrounds) do
+
 
     --ac.debug("controllercolor", controller.color)
     --local r, g, b, m = string.match(controller.color, '([%d.]+), ([%d.]+), ([%d.]+), ([%d.]+)')
@@ -244,15 +268,15 @@ local function backgroundsTab(dt)
     
 
     ac.debug("dt", dt)
-    table.insert(configBackgrounds, newBackground("notworking", rgb(0, 0, 0), "notworking", "no-really" .. bkgIdx))
+    table.insert(currentTheme.backgrounds, newBackground("notworking", rgb(0, 0, 0), "notworking", "no-really" .. bkgIdx))
 
     bkgIdx = bkgIdx + 1
 
   end
 
   if ui.button("Shuffle Palette") then
-    for i, obj in ipairs(configBackgrounds) do
-      configBackgrounds[i].color = rgbm(math.random(), math.random(), math.random(), 1.0)
+    for i in ipairs(currentTheme.backgrounds) do
+      currentTheme.backgrounds[i].color = rgbm(math.random(), math.random(), math.random(), 1.0)
     end
   end
   
@@ -332,7 +356,10 @@ local function debugger()
   ac.debug("config Backgrounds", configBackgrounds)
   ac.debug("Initialized Backgrounds", initializedBackgrounds)
 
-  ac.debug("Theme", theme)
+  ac.debug("Current Theme", currentTheme)
+  ac.debug("Current Backgrounds", currentTheme.backgrounds)
+
+  ac.debug("Themes", themes)
 end
 
 
@@ -390,16 +417,27 @@ local function tryOpenSteelStudioConf()
         ac.debug(steelStudioData)
 
  
+   
 
     if (initializedBackgrounds == false) then
-
-
-            ---- Generate backgrounds table from json records
+      ---- Setup Current Theme
       ---- we use the first theme at launch
-      generateBackgroundsTable(records[1].backgrounds, configBackgrounds)
+
+
+      -- copy the first theme
+      currentTheme = deepcopy(records[1])
+
+      currentTheme.backgrounds = transformBackgroundTable(currentTheme.backgrounds)
+
+
 
 
       initializedBackgrounds = true
+    end
+    
+    -- used to set background colors across all tabs according to configBackgrounds
+    for i, item in ipairs(currentTheme.backgrounds) do
+      changeMaterialTexture(item.meshNames, item.texture, item.color)
     end
 
     
@@ -407,13 +445,21 @@ local function tryOpenSteelStudioConf()
 
 end
 
+
+---- MAIN FUNCTION - WINDOW MAIN ----
 function script.windowMain(dt)
 
-
+  -- Debugger infos
   debugger()
 
+  -- Load Storage Settings not relative to track: crew/drivers visibility, hue wheel preference
+  setStorageSettings()
 
+
+
+  -- Open Steel Studio Configuration and load themes - apply first theme
   tryOpenSteelStudioConf()
+
 
 
 
@@ -421,10 +467,7 @@ function script.windowMain(dt)
 
 
 
-  -- used to set background colors across all tabs according to configBackgrounds
-  for i, item in ipairs(configBackgrounds) do
-    changeMaterialTexture(item.meshNames, item.texture, item.color)
-  end
+  
 
 
   ui.tabBar('someTabBarID', function()
@@ -532,6 +575,7 @@ end
 
 function script.onHideWindowMain()
   ac.console("Closed app")
+  initializedBackgrounds = false
   --[[ if light then
     alignOnce = true
     light:dispose()
