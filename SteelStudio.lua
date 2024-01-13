@@ -10,10 +10,12 @@ local steelConfig = "steelstudio.json"
 
 trackPath = ac.getFolder(ac.FolderID.ContentTracks) .. "\\" .. ac.getTrackID()
 steelStudioPath = trackPath .. "\\extension\\" .. steelConfig
+extensionPath = trackPath .. "\\extension\\"
 
+records = nil
 
-
-local foundSteelstudioConf = nil ---@type boolean?
+local foundSteelStudioConf = nil ---@type boolean?
+local validSteelStudioConf = nil ---@type boolean?
 
 steelStudioData = {}
 
@@ -47,6 +49,13 @@ local themes = {}
 local currentTheme = {}
 
 
+
+---- ERRORS on inputs ----
+
+local errors = {
+  inputLocation = ''
+}
+
 -------------------------------- To be decided --------------------------------
 
 local count = 1
@@ -62,8 +71,6 @@ local confFilename = nil
 
 
 local teleported = false
-
-local configBackgrounds = {}
 
 -- Storage data - not relative to track customizations
 local storage = ac.storage {
@@ -116,26 +123,60 @@ local function transformBackgroundTable(data)
   return result
 end
 
+local function stringToVec3(coordString)
+
+  ac.debug("input position", coordString)
+  local x, y, z = string.match(coordString, "([%d.-]+),%s*([%d.-]+),%s*([%d.-]+)")
+  return { x = tonumber(x), y = tonumber(y), z = tonumber(z) }
+end
 --function script.onShowWindowMain()
-  --ac.console("Opened App, here initialize it")
-  --
+--ac.console("Opened App, here initialize it")
+--
+function save()
+  
+  local bckName = "Steelstudio" .. "-test" .. ".json"
+  io.copyFile(extensionPath .. "empty.json", extensionPath .. bckName)
+
+  local file = io.open(extensionPath .. bckName, "w")
+
+  if file then
+    ac.console("File existing, writing")
+    --local dumped = deepcopy(currentTheme)
+    --local content = deepcopy(currentTheme)
+    --[[ for k, background in pairs(content.backgrounds) do
+      
+      content.backgrounds[k].color = "0.45699998736382, 0.63499999046326, 0.46500000357628"
+      ac.debug("CONTENT", content)
+    end ]]
+    file:write(json.encode(steelStudioData))
+    file:close()
+  end
+  
+
+ 
+  
+  -- ui.toast(ui.Icons.Confirm, filename .. " saved!")
+  --forceReload()
+  --saveState.saved = true
+end
 
 
-
-  --[[ if light then
+--[[ if light then
     alignOnce = true
     light:dispose()
     light = nil
   end ]]
-  --storage.initializedBackgrounds = false
+--storage.initializedBackgrounds = false
 --end
 
 local function welcomeTab()
   ui.text('Welcome!')
-  if foundSteelstudioConf then
-    ui.textWrapped("Steel Studio file found. This track is compatible with Steel Studio! Select one of the tabs to begin to customize the track or move your car.")
+  if foundSteelStudioConf then
+    ui.textWrapped(
+    "Steel Studio file found. This track is compatible with Steel Studio! Select one of the tabs to begin to customize the track or move your car.")
   else
-    ui.textWrapped("No Steel Studio file found. Don't worry, this track is still not compatible wih Steel Studio, but you can begin setting it from a blank template.")
+    ui.textWrapped(
+    "No Steel Studio file found. Don't worry, this track is still not compatible wih Steel Studio, but you can begin setting it from a blank template.")
   end
 end
 
@@ -146,7 +187,8 @@ end
 local function themesTab()
   ui.text('Themes')
 
-  ui.textWrapped('To be implemented. The idea of "Themes" is a collection of backgrounds, car positions and possibly other stuff.')
+  ui.textWrapped(
+  'To be implemented. The idea of "Themes" is a collection of backgrounds, car positions and possibly other stuff.')
 
 
 
@@ -154,67 +196,61 @@ local function themesTab()
   --TODO: Clean code
 
   --TODO: Caveat -  if I select a theme then change colors, they are modified even if I load the theme
-  
 
-  
+
+
   inputstring = ui.inputText("New Theme: ", inputstring, ui.InputTextFlags.Placeholder)
 
   ui.sameLine(0, 8)
 
   if ui.button("Save current theme") then
-    themes[inputstring] = deepcopy(currentTheme)
+    local currTheme = deepcopy(currentTheme)
+    currTheme.theme = inputstring
+    themes[inputstring] = currTheme
     inputstring = ''
   end
 
   ac.debug("input", inputstring)
 
+  ui.newLine()
+
   for k, item in pairs(themes) do
     ac.debug("itemKey", k)
     ac.debug("item", item)
-    if ui.button(k) then
-      
+    
+    ui.beginGroup(400)
+    
+    if ui.button(item['theme'],vec2(ui.availableSpaceX() - 40,0)) then
       currentTheme = deepcopy(item)
-      
     end
+    ui.sameLine(0, 8)
+    if ui.button("X") then
+      table.remove(themes, k)
+    end
+    ui.endGroup()
   end
 
 
+  -- from steel studio data, create themes buttons
   for k, item in pairs(steelStudioData) do
+
+    --[[ ui.text(item['theme'])
+    ui.text(steelStudioData[k].backgrounds[1].color)
     if ui.button(item['theme']) then
-      generateBackgroundsTable(steelStudioData[k].backgrounds, configBackgrounds)
-    end
-  end
-
-  if ui.button("Save Theme") then
-    themes['aaa'] = deepcopy(configBackgrounds)
+      currentTheme.backgrounds = transformBackgroundTable(steelStudioData[k].backgrounds)
+    end ]]
   end
 
 
-  if ui.button("Apply theme") then
+  if ui.button("Debug Random") then
     currentTheme.backgrounds[1].color = rgbm(math.random(), math.random(), math.random(), 1.0)
   end
 
 
-  
-  --[[ 
-  if ui.button('change color') then
-    changeMaterialTexture("01ROAD_FLOOR", "txDiffuse", rgbm(0.55, 0.27, 0.44, 1.0))
-    changeMaterialTexture("Cube.010", "txDiffuse", rgbm(0.25, 0.57, 0.44, 1.0))
-    changeMaterialTexture("Cube.011", "txDiffuse", rgbm(0.25, 0.27, 0.64, 1.0))
+  if ui.button("SAVE FILE") then
+    save()
   end
 
-  if ui.button('change color2') then
-    configBackgrounds[1].color = rgbm(0.15, 0.57, 0.24, 1.0)
-    --changeMaterialTexture("01ROAD_FLOOR", "txDiffuse", rgbm(0.15, 0.57, 0.24, 1.0))
-    --changeMaterialTexture("Cube.010", "txDiffuse", rgbm(0.35, 0.37, 0.64, 1.0))
-    --changeMaterialTexture("Cube.011", "txDiffuse", rgbm(0.65, 0.67, 0.64, 1.0))
-  end
-
-  if ui.button('random color') then
-    changeMaterialTexture("01ROAD_FLOOR", "txDiffuse", rgbm(math.random(), math.random(), math.random(), 1.0))
-    changeMaterialTexture("Cube.010", "txDiffuse", rgbm(math.random(), math.random(), math.random(), 1.0))
-    changeMaterialTexture("Cube.011", "txDiffuse", rgbm(math.random(), math.random(), math.random(), 1.0))
-  end ]]
 
 end
 
@@ -227,18 +263,13 @@ end
 
 
 local function newBkg()
-
-
   ui.text("New Background")
 end
 
 local function backgroundsTab(dt)
-
   --TODO: Based on Current theme. If I change values, do I need to save a new theme?
 
   for i, controller in ipairs(currentTheme.backgrounds) do
-
-
     --ac.debug("controllercolor", controller.color)
     --local r, g, b, m = string.match(controller.color, '([%d.]+), ([%d.]+), ([%d.]+), ([%d.]+)')
     --ac.debug("r", r)
@@ -250,12 +281,12 @@ local function backgroundsTab(dt)
     local window = addColorController("colorController" .. bkgIdx, controller.label, controller.color,
       controller.meshNames, controller.texture, storage.colorPickerType)
 
-  
-        ac.debug("picked color", window)
-  
+
+    ac.debug("picked color", window)
+
 
     -- Increment background index, required for new color controllers created by the app
-    bkgIdx = bkgIdx + 1 
+    bkgIdx = bkgIdx + 1
 
     --[[ if ui.button("Remove " .. controller.label) then
                 removeColorController(controller.id)
@@ -263,15 +294,12 @@ local function backgroundsTab(dt)
     --if window
     --ac.console(window)
   end
-  
-  if ui.button("Add new Color Controller") then
-    
 
+  if ui.button("Add new Color Controller") then
     ac.debug("dt", dt)
     table.insert(currentTheme.backgrounds, newBackground("notworking", rgb(0, 0, 0), "notworking", "no-really" .. bkgIdx))
 
     bkgIdx = bkgIdx + 1
-
   end
 
   if ui.button("Shuffle Palette") then
@@ -279,10 +307,6 @@ local function backgroundsTab(dt)
       currentTheme.backgrounds[i].color = rgbm(math.random(), math.random(), math.random(), 1.0)
     end
   end
-  
-
-  
-
 end
 
 
@@ -296,16 +320,44 @@ local function teleportCar(position, direction)
 end
 
 local function teleportTab()
-  ui.text('TAB 2')
 
+
+
+  ac.debug("Current Theme Locations", currentTheme.locations)
+
+
+  inputstring = ui.inputText("Location name... ", inputstring, ui.InputTextFlags.Placeholder)
+
+  ui.sameLine(0, 8)
+
+  if ui.button("Save current location") then
+    errors.inputLocation = ''
+    local currentPosition = dump(car.position)
+    ac.debug("Car pos X", currentPosition)
+    
+    if (inputstring ~= nil and inputstring ~= '') then
+      table.insert(currentTheme.locations, {
+        position = dump(car.position),
+        look = dump(car.look),
+        name = inputstring
+      })
+      inputstring = ''
+    else
+      errors.inputLocation = 'Error! Please enter a valid name.'
+    end
+  end
   
-  
+  ui.textColored(errors.inputLocation, rgbm.colors.red)
 
 
-  
-  if ui.button('Teleport 1') then teleportCar(vec3(54.07, 7.92154, -32.5626), vec3(0.0481339, -0.165144, 0.985094)) end
-  if ui.button('Teleport 2') then teleportCar(vec3(13.0424, 1.69585, 18.6731), vec3(-0.630298, -0.41161, -0.658256)) end
-
+  -- create buttons for locations in current theme
+  if currentTheme.locations then
+    for k, item in ipairs(currentTheme.locations) do
+      local position = stringToVec3(item['position'])
+      local look = stringToVec3(item['look'])
+      if ui.button(item['name']) then teleportCar(position, look) end
+    end
+  end
 
   if ui.button('Teleport to Starting Line') then physics.teleportCarTo(0, ac.SpawnSet.Start) end
   if ui.button('Teleport to Hotlap Start') then physics.teleportCarTo(0, ac.SpawnSet.HotlapStart) end
@@ -344,7 +396,8 @@ end
 local function debugger()
   ac.debug("Track path", trackPath)
   ac.debug("Steel Studio path", steelStudioPath)
-  ac.debug("Found Steel Studio Conf", foundSteelstudioConf)
+  ac.debug("Found Steel Studio Conf", foundSteelStudioConf)
+  ac.debug("Valid Steel Studio Conf", validSteelStudioConf)
 
   ac.debug("camera direction", ac.getSim().cameraLook)
   ac.debug("car position", carPosition)
@@ -353,11 +406,12 @@ local function debugger()
   ac.debug("car skin", carSkin)
 
 
-  ac.debug("config Backgrounds", configBackgrounds)
   ac.debug("Initialized Backgrounds", initializedBackgrounds)
 
   ac.debug("Current Theme", currentTheme)
-  ac.debug("Current Backgrounds", currentTheme.backgrounds)
+
+  
+  --ac.debug("Current Backgrounds", currentTheme.backgrounds)
 
   ac.debug("Themes", themes)
 end
@@ -367,7 +421,7 @@ local function extrasTab()
   ui.text('EXTRA')
 
 
-  
+
 
 
   if ui.checkbox('Hide Pit Crew', storage.hideCrew) then
@@ -395,60 +449,83 @@ end
 
 
 local function tryOpenSteelStudioConf()
-
   -- Load the JSON file
   local file = io.open(steelStudioPath, "r")
   if file == nil then
-    foundSteelstudioConf = false
+    foundSteelStudioConf = false
     --ac.console("error: no steel conf found for track")
   else
     --ac.console("nice: steel conf found for track")
-    foundSteelstudioConf = true
+    foundSteelStudioConf = true
     local data = file:read("*all")
     file:close()
 
 
 
     -- Parse the json data into a Lua table
-        local records = json.decode(data)
+    records = json.decode(data)
+
+    -- return if there is no records, can't continue
+    if records then
+      validSteelStudioConf = true
+      steelStudioData = records
+    else
+      validSteelStudioConf = false
+      return
+    end
+
+    ac.debug("Steel Studio Data", steelStudioData)
+
+
     
-        steelStudioData = records
 
-        ac.debug(steelStudioData)
-
- 
-   
 
     if (initializedBackgrounds == false) then
       ---- Setup Current Theme
       ---- we use the first theme at launch
 
+      -- if the json doesn't have an array of themes, it's not valid
+      -- I can't continue setting the first background
+      if records[1] == nil then
+        ac.console("Not a valid Steel Studio Theme!")
+        return
+      end
+
+      --populate themes table. for theme buttons
+      -- from steel studio data, create themes buttons
+      for k, item in pairs(steelStudioData) do
+        local theme = item
+        --BUG: need to convert backgrounds?
+        theme.backgrounds = transformBackgroundTable(steelStudioData[k].backgrounds)
+        table.insert(themes, theme)
+      end
 
       -- copy the first theme
       currentTheme = deepcopy(records[1])
 
-      currentTheme.backgrounds = transformBackgroundTable(currentTheme.backgrounds)
+      -- exit if no backgrounds in theme
+      if currentTheme.backgrounds == nil then
+        ac.console("No backgrounds found in theme!")
+        return
+      end
 
-
-
+      --currentTheme.backgrounds = transformBackgroundTable(currentTheme.backgrounds)
 
       initializedBackgrounds = true
     end
-    
-    -- used to set background colors across all tabs according to configBackgrounds
-    for i, item in ipairs(currentTheme.backgrounds) do
-      changeMaterialTexture(item.meshNames, item.texture, item.color)
+
+    if currentTheme.backgrounds ~= nil then
+      -- used to set background colors across all tabs according to current theme
+      for i, item in ipairs(currentTheme.backgrounds) do
+        changeMaterialTexture(item.meshNames, item.texture, item.color)
+      end
     end
-
-    
   end
-
 end
 
 
 ---- MAIN FUNCTION - WINDOW MAIN ----
 function script.windowMain(dt)
-
   -- Debugger infos
   debugger()
 
@@ -461,13 +538,13 @@ function script.windowMain(dt)
   tryOpenSteelStudioConf()
 
 
-
+  
 
   ui.beginOutline()
 
 
 
-  
+
 
 
   ui.tabBar('someTabBarID', function()
@@ -477,7 +554,6 @@ function script.windowMain(dt)
     ui.tabItem('Teleport', teleportTab)
     ui.tabItem('Extra', extrasTab)
     ui.tabItem('About', aboutTab)
-    
   end)
 
 
@@ -530,10 +606,10 @@ function script.windowMain(dt)
   --ui.sameLine(0, 4)
 
 
-  
+
   --trackDirectory = ac.getFolder(ac.FolderID.ContentTracks) .. "\\" .. ac.getTrackID()
   --confFilename = trackDirectory .. "\\extension\\steel_studio.ini"
-  
+
 
   --local ini = ac.INIConfig.load(confFilename, 10)
   --ac.debug("ini", ini)
@@ -543,15 +619,15 @@ function script.windowMain(dt)
   --local r, g, b = string.match(background1, '"(%d+)", "(%d+)", "(%d+)"')
 
 
-  
+
 
   --ac.debug("r", r)
   --ac.debug("backgorund1", rgb(tonumber(r), tonumber(g), tonumber(b)))
-  
 
-  
 
-  
+
+
+
 
 
 
@@ -564,14 +640,11 @@ function script.windowMain(dt)
   --local description2 = records[2].description
 
 
-  
+
 
 
   ui.pushItemWidth(ui.availableSpaceX())
-
 end
-
-
 
 function script.onHideWindowMain()
   ac.console("Closed app")
@@ -584,13 +657,12 @@ function script.onHideWindowMain()
   --storage.initializedBackgrounds = false
 end
 
-
 function script.windowMainSettings(dt)
   ui.text('UI Preferences')
 
   ui.text('Color Picker Type')
 
-  if ui.button("Hue Wheel", vec2(0,0), ui.ButtonFlags.Activable) then
+  if ui.button("Hue Wheel", vec2(0, 0), ui.ButtonFlags.Activable) then
     if storage.colorPickerType == ui.ColorPickerFlags.PickerHueBar then
       storage.colorPickerType = ui.ColorPickerFlags.PickerHueWheel
     else
