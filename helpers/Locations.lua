@@ -2,7 +2,7 @@
 --- @param position number position coordinates
 --- @param direction number look coordinates
 --- @return nil
-local function teleportCar(position, direction)
+function teleportCar(position, direction)
     local customCarPosition = vec3(position)
     local customCarDirection = -vec3(direction)
     TeleportTimer = setInterval(function()
@@ -14,7 +14,7 @@ end
 
 
 function FetchLocations()
-    if not FETCHED_LOCATIONS then
+
         local file = io.scanDir(STEEL_STUDIO_FOLDER_PATH, LOCATIONS_FILE_NAME)
         ac.debug("Location File", file)
 
@@ -35,9 +35,6 @@ function FetchLocations()
             ac.console("Locations: can't decode json!")
         end
 
-    FETCHED_LOCATIONS = true
-        ac.debug("CONST LOCATIONS", LOCATIONS)
-    end
 
     ac.debug("Fetched Locations", FETCHED_LOCATIONS)
 end

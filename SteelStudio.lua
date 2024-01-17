@@ -48,7 +48,7 @@ drivers = ac.findNodes('?DRIVER?')
 ---- BACKGROUND VALUES ----
 
 local bkgIdx = 0
-
+changedValues = 'Original settings'
 
 ---- THEME CONFIGURATION ----
 
@@ -86,15 +86,101 @@ local teleported = false
 
 
 
+function saveLocations()
+  --local bckName = "Steelstudio" .. ".json"
+  --io.copyFile(extensionPath .. "empty.json", extensionPath .. bckName)
+
+  local file = io.open(LOCATIONS_FILE_PATH, "w")
+
+  if file then
+    ac.console("File existing, writing")
+
+    local content = deepcopy(LOCATIONS)
+
+    ac.debug("CONTENT", content)
+    file:write(json.encode(content))
+    file:close()
+  end
 
 
 
+
+  ui.toast(ui.Icons.Confirm, "Locations file saved!")
+  --forceReload()
+  --saveState.saved = true
+end
+
+function saveTheme(themeContent)
+  --local bckName = "Steelstudio" .. ".json"
+  --io.copyFile(extensionPath .. "empty.json", extensionPath .. bckName)
+
+  local fileName = THEMES_PREFIX .. themeContent.theme
+  local file = io.open(STEEL_STUDIO_FOLDER_PATH .. '\\' .. fileName .. '.json', "w")
+
+  if file then
+    ac.console("File existing, writing")
+
+    local content = deepcopy(themeContent)
+
+    ac.debug("THEME CONTENT", themeContent)
+
+
+    for k, background in pairs(content.backgrounds) do
+      local val = content.backgrounds[k].color
+      ac.debug("val", dump(val))
+      content.backgrounds[k].color = tostring(val.r .. ", " .. val.g .. ", " .. val.b .. ", " .. val.mult)
+    end
+
+    ac.debug("CONTENT", content)
+    file:write(json.encode(content))
+    file:close()
+  else
+    ui.toast(ui.Icons.Bomb, "File not found!")
+  end
+
+
+
+
+  -- ui.toast(ui.Icons.Confirm, filename .. " saved!")
+  --forceReload()
+  --saveState.saved = true
+end
+
+
+function recycleTheme(themeName)
+  local fileName = THEMES_PREFIX .. themeName
+  local filePath = STEEL_STUDIO_FOLDER_PATH .. '\\' .. fileName .. '.json'
+
+  --local file = io.open(filePath, "r")
+
+  --ac.debug("Theme path", filePath)
+
+  --ui.toast(ui.Icons.ArrowUp, filePath)
+
+  local exists = io.exists(filePath)
+  if exists then
+
+
+    io.deleteFile(filePath)
+    ui.toast(ui.Icons.Confirm, filePath .. " deleted")
+
+    
+  end
+
+  
+
+
+
+    
+
+  
+
+end
 
 --function script.onShowWindowMain()
 --ac.console("Opened App, here initialize it")
 --
 function save()
-  
   --local bckName = "Steelstudio" .. ".json"
   --io.copyFile(extensionPath .. "empty.json", extensionPath .. bckName)
 
@@ -114,20 +200,19 @@ function save()
         theme.backgrounds[k].color = tostring(val.r .. ", " .. val.g .. ", " .. val.b .. ", " .. val.mult)
       end
     end
-    
+
     ac.debug("CONTENT", content)
     file:write(json.encode(content))
     file:close()
   end
-  
 
- 
-  
+
+
+
   -- ui.toast(ui.Icons.Confirm, filename .. " saved!")
   --forceReload()
   --saveState.saved = true
 end
-
 
 --[[ if light then
     alignOnce = true
@@ -141,24 +226,19 @@ local function welcomeTab()
   ui.text('Welcome!')
   if foundSteelStudioConf then
     ui.textWrapped(
-    "Steel Studio file found. This track is compatible with Steel Studio! Select one of the tabs to begin to customize the track or move your car.")
+      "Steel Studio file found. This track is compatible with Steel Studio! Select one of the tabs to begin to customize the track or move your car.")
   else
     ui.textWrapped(
-    "No Steel Studio file found. Don't worry, this track is still not compatible wih Steel Studio, but you can begin setting it from a blank template.")
+      "No Steel Studio file found. Don't worry, this track is still not compatible wih Steel Studio, but you can begin setting it from a blank template.")
   end
 end
 
 
-
-
-
 local function themesTab()
-
-
   ui.textWrapped(
-  '"Themes" are a collection of backgrounds, car positions and possibly other stuff.')
+    '"Themes" are a collection of backgrounds, car positions and possibly other stuff.')
 
-  
+
 
   -- don't show theme settings if there is no current theme
   if next(CURRENT_THEME) == nil then
@@ -172,61 +252,57 @@ local function themesTab()
   end
 
 
+  local defaultLabel = 'Theme ' .. #LOADED_THEMES + 1
 
-  inputstring = ui.inputText("New Theme: ", inputstring, ui.InputTextFlags.Placeholder)
+  local newThemeLabel = ui.inputText("New Theme: ", defaultLabel, ui.InputTextFlags.Placeholder)
 
   ui.sameLine(0, 8)
 
   if ui.button("Save current theme") then
-    local currTheme = deepcopy(currentTheme)
-    currTheme.theme = inputstring
+    local currTheme = deepcopy(CURRENT_THEME)
+    currTheme.theme = newThemeLabel
     --themes[inputstring] = currTheme
-    table.insert(themes, currTheme)
-    inputstring = ''
+    table.insert(LOADED_THEMES, currTheme)
+    saveTheme(currTheme)
   end
 
-  ac.debug("input", inputstring)
+  ac.debug("input", newThemeLabel)
 
   ui.newLine()
 
-  for k, item in pairs(THEMES) do
+  for k, item in ipairs(LOADED_THEMES) do
     ac.debug("itemKey", k)
     ac.debug("item", item)
-    
+
     ui.beginGroup(400)
-    
-    if ui.button(item['theme'],vec2(ui.availableSpaceX() - 40,0)) then
+
+    if ui.button(item['theme'], vec2(ui.availableSpaceX() - 40, 0)) then
       CURRENT_THEME = deepcopy(item)
     end
     ui.sameLine(0, 8)
-    if ui.button("X") then
-      table.remove(THEMES, k)
+    if ui.button(item['theme'] .. "X") then
+      ui.modalPopup('Delete ' .. item['theme'], 'Are you sure to delete the selected theme?', function(okPressed)
+        if okPressed then
+          table.remove(LOADED_THEMES, k)
+          recycleTheme(item['theme'])
+        end
+      end)
+      
     end
     ui.endGroup()
   end
 
   ac.debug("CURRENT_THEME", CURRENT_THEME)
 
+
   -- from steel studio data, create themes buttons
   for k, item in pairs(steelStudioData) do
-
     --[[ ui.text(item['theme'])
     ui.text(steelStudioData[k].backgrounds[1].color)
     if ui.button(item['theme']) then
       currentTheme.backgrounds = transformBackgroundTable(steelStudioData[k].backgrounds)
     end ]]
   end
-
-
-  if ui.button("Debug Random") then
-    currentTheme.backgrounds[1].color = rgbm(math.random(), math.random(), math.random(), 1.0)
-  end
-
-
-  if ui.button("SAVE FILE") then
-    save()
-  end
-
 
 end
 
@@ -249,67 +325,52 @@ local function backgroundsTab(dt)
   if not CURRENT_THEME.backgrounds then
     ui.text("No background found in current theme. ")
     return
-  end
-
-  for i, controller in ipairs(CURRENT_THEME.backgrounds) do
-    --ac.debug("controllercolor", controller.color)
-    --local r, g, b, m = string.match(controller.color, '([%d.]+), ([%d.]+), ([%d.]+), ([%d.]+)')
-    --ac.debug("r", r)
-    --ac.debug("g", g)
-    --ac.debug("b", b)
-    --ac.debug("m", m)
-
-    --rgbm(tonumber(r), tonumber(g), tonumber(b), tonumber(m))
-    local window = addColorController("colorController" .. bkgIdx, controller.label, controller.color,
-      controller.meshNames, controller.texture, Storage.colorPickerType)
+  else
+    ui.text(changedValues)
 
 
-    ac.debug("picked color", window)
+    for i, controller in ipairs(CURRENT_THEME.backgrounds) do
+      ac.debug("controller color", controller.color)
+
+      addColorController("colorController" .. i, controller.label, controller.color,
+        controller.meshNames, controller.texture, Storage.colorPickerType)
 
 
-    -- Increment background index, required for new color controllers created by the app
-    bkgIdx = bkgIdx + 1
-
-    --[[ if ui.button("Remove " .. controller.label) then
-                removeColorController(controller.id)
-            end ]]
-    --if window
-    --ac.console(window)
-  end
-
-  if ui.button("Add new Color Controller") then
-    ac.debug("dt", dt)
-    table.insert(currentTheme.backgrounds, newBackground("notworking", rgb(0, 0, 0), "notworking", "no-really" .. bkgIdx))
-
-    bkgIdx = bkgIdx + 1
-  end
-
-  if ui.button("Shuffle Palette") then
-    for i in ipairs(CURRENT_THEME.backgrounds) do
-      CURRENT_THEME.backgrounds[i].color = rgbm(math.random(), math.random(), math.random(), 1.0)
+      ac.debug("picker", controller)
     end
-  end
 
-  ac.debug("CURRENT_THEME", CURRENT_THEME)
+    if ui.button("Add new Color Controller") then
+      ac.debug("dt", dt)
+      table.insert(CURRENT_THEME.backgrounds,
+        newBackground("notworking", rgb(0, 0, 0), "notworking", "no-really" .. bkgIdx))
+
+      bkgIdx = bkgIdx + 1
+    end
+
+    if ui.button("Shuffle Palette") then
+      for i in ipairs(CURRENT_THEME.backgrounds) do
+        CURRENT_THEME.backgrounds[i].color = rgbm(math.random(), math.random(), math.random(), 1.0)
+      end
+    end
+
+    ac.debug("CURRENT_THEME", CURRENT_THEME)
+  end
 end
 
 
 
 
 local function teleportTab()
-
-
   -- don't show location settings if there is no current theme
-  if not currentTheme.locations then
-    ui.text("No locations found in current theme. ")
+  if not LOCATIONS then
+    ui.text("No locations found for current track. ")
     return
-  end
+  else
 
 
-  ac.debug("Current Theme Locations", currentTheme.locations)
+    local locationsIdx = "Point " .. #LOCATIONS + 1
 
-
-  inputstring = ui.inputText("Location name... ", inputstring, ui.InputTextFlags.Placeholder)
+    inputstring = ui.inputText("Location name... " .. locationsIdx, locationsIdx, ui.InputTextFlags.Placeholder)
 
   ui.sameLine(0, 8)
 
@@ -317,9 +378,9 @@ local function teleportTab()
     errors.inputLocation = ''
     local currentPosition = dump(car.position)
     ac.debug("Car pos X", currentPosition)
-    
+
     if (inputstring ~= nil and inputstring ~= '') then
-      table.insert(currentTheme.locations, {
+      table.insert(LOCATIONS, {
         position = dump(car.position),
         look = dump(car.look),
         name = inputstring
@@ -329,18 +390,18 @@ local function teleportTab()
       errors.inputLocation = 'Error! Please enter a valid name.'
     end
   end
-  
+
   ui.textColored(errors.inputLocation, rgbm.colors.red)
 
 
   -- create buttons for locations in current theme
-  if currentTheme.locations then
-    for k, item in ipairs(currentTheme.locations) do
+
+    for k, item in pairs(LOCATIONS) do
       local position = stringToVec3(item['position'])
       local look = stringToVec3(item['look'])
       if ui.button(item['name']) then teleportCar(position, look) end
     end
-  end
+
 
   if ui.button('Teleport to Starting Line') then physics.teleportCarTo(0, ac.SpawnSet.Start) end
   if ui.button('Teleport to Hotlap Start') then physics.teleportCarTo(0, ac.SpawnSet.HotlapStart) end
@@ -348,31 +409,13 @@ local function teleportTab()
 
   if ui.button('Flip Car Direction') then teleportCar(carPosition, -carLook) end
 
-  --[[ local customCarPosition = vec3(54.07, 7.92154, -32.5626)
-        local customCarDirection = -vec3(0.0481339, -0.165144, 0.985094)
-        clickToTeleport = setInterval(function()
-            physics.setCarPosition(0, customCarPosition, customCarDirection)
+  if ui.button("Save Locations") then
+    saveLocations()
 
-            clearInterval(clickToTeleport)
-        end) ]]
-
-  --[[ local clickToTeleport
+  end
 
 
-    local customCarPosition = vec3(54.07, 7.92154, -32.5626)
-    local customCarDirection = -vec3(0.0481339, -0.165144, 0.985094)
-
-    if not teleported then
-        clickToTeleport = setInterval(function()
-            --local pos = customCarPosition
-            physics.setCarPosition(0, customCarPosition, customCarDirection)
-            --physics.setCarPosition(0, pos, -ac.getSim().cameraLook)
-
-            clearInterval(clickToTeleport)
-            clickToTeleport = nil
-            teleported = true
-        end)
-    end ]]
+  end
 end
 
 
@@ -395,10 +438,16 @@ local function debugger()
 
   ac.debug("Current Theme", currentTheme)
 
-  
+
   --ac.debug("Current Backgrounds", currentTheme.backgrounds)
 
-  ac.debug("Themes", themes)
+  ac.debug("LOADED THEMES", LOADED_THEMES)
+  ac.debug("CURRENT_THEME", CURRENT_THEME)
+
+  ac.debug("LOCATIONS", LOCATIONS)
+  ac.debug("LOCATIONS FILE PATH", LOCATIONS_FILE_PATH)
+
+
 end
 
 
@@ -465,7 +514,7 @@ local function tryOpenSteelStudioConf()
     ac.debug("Steel Studio Data", steelStudioData)
 
 
-    
+
 
 
     if (initializedBackgrounds == false) then
@@ -501,8 +550,6 @@ local function tryOpenSteelStudioConf()
 
       initializedBackgrounds = true
     end
-
-    
   end
 end
 
@@ -516,8 +563,16 @@ function script.windowMain(dt)
   SetStorageSettings()
 
 
-  FetchThemes()
-  FetchLocations()
+  if not FETCHED_THEMES then
+    FetchThemes()
+    FETCHED_THEMES = true
+  end
+
+  if not FETCHED_LOCATIONS then
+    FetchLocations()
+    FETCHED_LOCATIONS = true
+  end
+
 
   -- Open Steel Studio Configuration and load themes - apply first theme
   -- tryOpenSteelStudioConf()
@@ -529,7 +584,7 @@ function script.windowMain(dt)
       changeMaterialTexture(item.meshNames, item.texture, item.color)
     end
   end
-  
+
 
   ui.beginOutline()
 
