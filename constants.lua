@@ -9,6 +9,15 @@ TRACK_PATH = ac.getFolder(ac.FolderID.ContentTracks) .. "\\" .. ac.getTrackID()
 TRACK_EXTENSION_PATH = TRACK_PATH .. "\\extension\\"
 STEEL_STUDIO_FOLDER_PATH = TRACK_EXTENSION_PATH .. STEEL_STUDIO_FOLDER_NAME
 
+
+
+
+---------- LOGS ------------
+
+LOGS_FILE_NAME = 'steelstudio_logs.txt'
+LOGS_FILE_PATH = TRACK_EXTENSION_PATH .. STEEL_STUDIO_FOLDER_NAME .. '\\' .. LOGS_FILE_NAME
+
+
 ---------- THEMES ----------
 
 THEMES_PREFIX = 'theme_'
@@ -31,3 +40,25 @@ FETCHED_LOCATIONS = false
 ---------- BACKGROUNDS ----------
 
 INITIALIZED_BACKGROUNDS = false
+
+---------- OBJECTS ----------
+
+OBJECTS_FILE_NAME = 'objects.json'
+OBJECTS_FILE_PATH = TRACK_EXTENSION_PATH .. STEEL_STUDIO_FOLDER_NAME .. '\\' .. OBJECTS_FILE_NAME
+FOUND_OBJECTS_FILE = nil
+
+OBJECTS = {}
+FETCHED_OBJECTS = false
+
+---------- AUDIO ----------
+
+INITIALIZED_AUDIO = false
+GAME_AUDIO_CHANNELS = ac.AudioChannel
+DISABLE_AUDIO = false
+
+AUDIO_VOLUME = {}
+INITIAL_AUDIO_VOLUME = {}
+
+ac.debug("Audio Volume", AUDIO_VOLUME)
+ac.debug("Disable Audio", DISABLE_AUDIO)
+

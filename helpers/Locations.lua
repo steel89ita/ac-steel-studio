@@ -15,12 +15,18 @@ end
 
 function FetchLocations()
 
-        local file = io.scanDir(STEEL_STUDIO_FOLDER_PATH, LOCATIONS_FILE_NAME)
+    local file = io.open(STEEL_STUDIO_FOLDER_PATH .. '\\' .. LOCATIONS_FILE_NAME, "r")
         ac.debug("Location File", file)
 
 
         if file then
-            FOUND_LOCATIONS_FILE = true
+        FOUND_LOCATIONS_FILE = true
+        local records = DecodeJSON(STEEL_STUDIO_FOLDER_PATH .. '\\' .. LOCATIONS_FILE_NAME)
+        if records ~= nil then
+            LOCATIONS = records
+        else
+            ac.console("Locations: can't decode json!")
+        end
         else
             FOUND_LOCATIONS_FILE = false
         end
@@ -28,12 +34,7 @@ function FetchLocations()
         ac.debug("Found Locations File", FOUND_LOCATIONS_FILE)
         
 
-    local records = DecodeJSON(STEEL_STUDIO_FOLDER_PATH .. '\\' .. file[1])
-        if records ~= nil then
-            LOCATIONS = records
-        else
-            ac.console("Locations: can't decode json!")
-        end
+    
 
 
     ac.debug("Fetched Locations", FETCHED_LOCATIONS)

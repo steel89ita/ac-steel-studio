@@ -3,6 +3,8 @@ require('helpers/ValueHelpers')
 require('helpers/Backgrounds')
 require('helpers/Themes')
 require('helpers/Locations')
+require('helpers/Objects')
+require('helpers/Audio')
 local json = require('lib/json')
 
 -------------------------------- CONSTANTS --------------------------------
@@ -12,6 +14,8 @@ require('constants')
 -------------------------------- Initializing --------------------------------
 sim = ac.getSim() ---@type ac.StateSim
 car = ac.getCar(sim.focusedCar) or ac.getCar(0) ---@type ac.StateCar?
+
+
 
 local steelConfig = "steelstudio.json"
 
@@ -241,7 +245,7 @@ local function themesTab()
 
 
   -- don't show theme settings if there is no current theme
-  if next(CURRENT_THEME) == nil then
+  if CURRENT_THEME and next(CURRENT_THEME) == nil then
     ui.text("No themes found. Start by adding a new theme here. ")
 
     if ui.button("Add new theme") then
@@ -306,15 +310,7 @@ local function themesTab()
 
 end
 
-local function aboutTab()
-  ui.text('Steel Studio v.0.1')
-  --ui.text('physics late: ' .. ac.getSim().physicsLate)
-  ui.text('CPU occupancy: ' .. ac.getSim().cpuOccupancy)
-  --ui.text('CPU time: ' .. ac.getSim().cpuTime)
 
-  ui.text("CONSTANT:" .. TEST_VALUE)
-  changeConstant()
-end
 
 
 
@@ -322,7 +318,7 @@ local function backgroundsTab(dt)
   --TODO: Based on Current theme. If I change values, do I need to save a new theme?
 
   -- don't show background settings if there is no current theme
-  if not CURRENT_THEME.backgrounds then
+  if CURRENT_THEME and not CURRENT_THEME.backgrounds then
     ui.text("No background found in current theme. ")
     return
   else
@@ -366,35 +362,33 @@ local function teleportTab()
     ui.text("No locations found for current track. ")
     return
   else
-
-
     local locationsIdx = "Point " .. #LOCATIONS + 1
 
     inputstring = ui.inputText("Location name... " .. locationsIdx, locationsIdx, ui.InputTextFlags.Placeholder)
 
-  ui.sameLine(0, 8)
+    ui.sameLine(0, 8)
 
-  if ui.button("Save current location") then
-    errors.inputLocation = ''
-    local currentPosition = dump(car.position)
-    ac.debug("Car pos X", currentPosition)
+    if ui.button("Save current location") then
+      errors.inputLocation = ''
+      local currentPosition = dump(car.position)
+      ac.debug("Car pos X", currentPosition)
 
-    if (inputstring ~= nil and inputstring ~= '') then
-      table.insert(LOCATIONS, {
-        position = dump(car.position),
-        look = dump(car.look),
-        name = inputstring
-      })
-      inputstring = ''
-    else
-      errors.inputLocation = 'Error! Please enter a valid name.'
+      if (inputstring ~= nil and inputstring ~= '') then
+        table.insert(LOCATIONS, {
+          position = dump(car.position),
+          look = dump(car.look),
+          name = inputstring
+        })
+        inputstring = ''
+      else
+        errors.inputLocation = 'Error! Please enter a valid name.'
+      end
     end
-  end
 
-  ui.textColored(errors.inputLocation, rgbm.colors.red)
+    ui.textColored(errors.inputLocation, rgbm.colors.red)
 
 
-  -- create buttons for locations in current theme
+    -- create buttons for locations in current theme
 
     for k, item in pairs(LOCATIONS) do
       local position = stringToVec3(item['position'])
@@ -403,19 +397,49 @@ local function teleportTab()
     end
 
 
-  if ui.button('Teleport to Starting Line') then physics.teleportCarTo(0, ac.SpawnSet.Start) end
-  if ui.button('Teleport to Hotlap Start') then physics.teleportCarTo(0, ac.SpawnSet.HotlapStart) end
-  if ui.button('Teleport to Pits') then physics.teleportCarTo(0, ac.SpawnSet.Pits) end
+    if ui.button('Teleport to Starting Line') then physics.teleportCarTo(0, ac.SpawnSet.Start) end
+    if ui.button('Teleport to Hotlap Start') then physics.teleportCarTo(0, ac.SpawnSet.HotlapStart) end
+    if ui.button('Teleport to Pits') then physics.teleportCarTo(0, ac.SpawnSet.Pits) end
 
-  if ui.button('Flip Car Direction') then teleportCar(carPosition, -carLook) end
+    if ui.button('Flip Car Direction') then teleportCar(carPosition, -carLook) end
 
-  if ui.button("Save Locations") then
-    saveLocations()
+    if ui.button("Save Locations") then
+      saveLocations()
+    end
+  end
+end
+
+local function objectsTab()
+
+
+
+  for k, mesh in pairs(OBJECTS) do
+    local foundMesh = ac.findMeshes(mesh['meshNames'][1])
+    if not mesh['enabled'] then
+      foundMesh:setVisible(false)
+    else
+      foundMesh:setVisible(true)
+    end
 
   end
+  
+  
+  if #OBJECTS == 0 then
+    ui.text("No objects controller found for current track. ")
+    return
+  else
+    ui.text("Objects:")
 
-
+    for k, v in pairs(OBJECTS) do
+      local meshes = ac.findMeshes(v['meshNames'][1])
+      ac.debug("FOUND MESHES", meshes)
+      if ui.checkbox(v['name'], v['enabled']) then
+        ac.console("Disable ")
+        OBJECTS[k]['enabled'] = not OBJECTS[k]['enabled']
+      end
+    end
   end
+  ac.debug("OBJECTS", OBJECTS)
 end
 
 
@@ -447,6 +471,7 @@ local function debugger()
   ac.debug("LOCATIONS", LOCATIONS)
   ac.debug("LOCATIONS FILE PATH", LOCATIONS_FILE_PATH)
 
+  ac.debug("Initialized Audio", INITIALIZED_AUDIO)
 
 end
 
@@ -455,7 +480,26 @@ local function extrasTab()
   ui.text('EXTRA')
 
 
+  if ui.checkbox('Disable Audio', Storage.disableAudio) then
 
+    if not Storage.disableAudio then
+      ui.modalPopup('Disable Audio?',
+        'Are you sure to disable audio? Keep in mind that this setting will be kept between gaming sessions. You will have to remember to re enable it.',
+        function(okPressed)
+          if okPressed then
+            Storage.disableAudio = not Storage.disableAudio
+          end
+        end)
+    else
+      Storage.disableAudio = not Storage.disableAudio
+    end
+    
+
+    
+  end
+
+
+  
 
 
   if ui.checkbox('Hide Pit Crew', Storage.hideCrew) then
@@ -477,10 +521,31 @@ local function extrasTab()
   else
     drivers:setVisible(true)
   end
+
+  if Storage.disableAudio then
+    for i, channel in pairs(AUDIO_VOLUME) do
+      AUDIO_VOLUME[i] = 0
+    end
+  else
+    AUDIO_VOLUME = deepcopy(INITIAL_AUDIO_VOLUME)
+  end
+
+  
+  
+  ac.debug("Audio Volume", AUDIO_VOLUME)
+
 end
 
 
+local function aboutTab()
+  ui.text('Steel Studio v.0.1')
+  --ui.text('physics late: ' .. ac.getSim().physicsLate)
+  ui.text('CPU occupancy: ' .. ac.getSim().cpuOccupancy)
+  --ui.text('CPU time: ' .. ac.getSim().cpuTime)
 
+  ui.text("CONSTANT:" .. TEST_VALUE)
+  changeConstant()
+end
 
 
 
@@ -562,6 +627,10 @@ function script.windowMain(dt)
   -- Load Storage Settings not relative to track: crew/drivers visibility, hue wheel preference
   SetStorageSettings()
 
+  -- Set Audio Value according to Extras Tab Audio Toggle
+  SetGameVolume()
+
+  
 
   if not FETCHED_THEMES then
     FetchThemes()
@@ -573,13 +642,32 @@ function script.windowMain(dt)
     FETCHED_LOCATIONS = true
   end
 
+  if not FETCHED_OBJECTS then
+    FetchObjects()
+  
+    --[[ local foundMeshes = ac.findAny('LIGHTS')
+
+    ac.debug("FMESHES", foundMeshes:name(2))
+    for i, v in ipairs(foundMeshes) do
+      ac.console(foundMeshes:name(i))
+      logFile(LOGS_FILE_PATH, foundMeshes:name(i))
+    end ]]
+    
+    FETCHED_OBJECTS = true
+  end
+
+  if not INITIALIZED_AUDIO then
+    InitializeAudio()
+    INITIALIZED_AUDIO = true
+  end
+
 
   -- Open Steel Studio Configuration and load themes - apply first theme
   -- tryOpenSteelStudioConf()
 
 
   -- used to set background colors across all tabs according to current theme
-  if CURRENT_THEME.backgrounds ~= nil then
+  if CURRENT_THEME and CURRENT_THEME.backgrounds ~= nil then
     for i, item in ipairs(CURRENT_THEME.backgrounds) do
       changeMaterialTexture(item.meshNames, item.texture, item.color)
     end
@@ -589,7 +677,7 @@ function script.windowMain(dt)
   ui.beginOutline()
 
 
-
+  
 
 
 
@@ -598,6 +686,7 @@ function script.windowMain(dt)
     ui.tabItem('Themes', themesTab)
     ui.tabItem('Backgrounds', backgroundsTab)
     ui.tabItem('Teleport', teleportTab)
+    ui.tabItem('Objects', objectsTab)
     ui.tabItem('Extra', extrasTab)
     ui.tabItem('About', aboutTab)
   end)
@@ -695,6 +784,8 @@ end
 function script.onHideWindowMain()
   ac.console("Closed app")
   initializedBackgrounds = false
+  FETCHED_OBJECTS = false
+  INITIALIZED_AUDIO = false
   --[[ if light then
     alignOnce = true
     light:dispose()

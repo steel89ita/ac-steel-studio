@@ -68,3 +68,14 @@ function newLight(position, color)
     light.fadeSmooth = 200
     return light
 end
+
+
+
+function logFile(sourceFile, string)
+    local file = io.open(sourceFile, "a")
+    if file then
+        file:write(string, "\n")
+        file:close()
+    end
+
+end
