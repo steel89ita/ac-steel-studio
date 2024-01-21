@@ -1,12 +1,14 @@
 --- teleport car to location
 --- @param position number position coordinates
 --- @param direction number look coordinates
+--- @param carIndex number car index
 --- @return nil
-function teleportCar(position, direction)
+function teleportCar(position, direction, --[[optional]]carIndex)
     local customCarPosition = vec3(position)
-    local customCarDirection = -vec3(direction)
-    TeleportTimer = setInterval(function()
-        physics.setCarPosition(0, customCarPosition, customCarDirection)
+  local customCarDirection = -vec3(direction)
+    local carIdx = carIndex or 0
+  TeleportTimer = setInterval(function()
+        physics.setCarPosition(carIdx, customCarPosition, customCarDirection)
         clearInterval(TeleportTimer)
     end)
 end

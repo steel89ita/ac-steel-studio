@@ -14,22 +14,14 @@ end ]]
 
 
 function FetchObjects()
-    local file = io.open(STEEL_STUDIO_FOLDER_PATH .. '\\' .. OBJECTS_FILE_NAME, "r")
+    local file = io.open(OBJECTS_FILE_PATH, "r")
     ac.debug("Objects File", file)
 
 
     if file then
         FOUND_OBJECTS_FILE = true
-        local records = DecodeJSON(STEEL_STUDIO_FOLDER_PATH .. '\\' .. OBJECTS_FILE_NAME)
+        local records = DecodeJSON(OBJECTS_FILE_PATH)
         if records ~= nil then
-            -- add enabled variable for every object
-            for k, v in pairs(records) do
-                if records[k]['default'] then
-                    records[k]['enabled'] = records[k]['default']
-                else
-                    records[k]['enabled'] = true
-                end
-            end
 
             OBJECTS = records
         else

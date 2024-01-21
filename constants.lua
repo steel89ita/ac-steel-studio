@@ -1,6 +1,10 @@
 TEST_VALUE = 123344334
 TEST_GLOBAL = nil
 
+---------- UI PALETTE ------------
+
+COLOR_GREEN = rgbm(0.1, 0.5, 0.1, 0.5)
+
 ---------- PATHS ----------
 
 STEEL_STUDIO_FOLDER_NAME = 'steelstudio'
@@ -8,8 +12,6 @@ STEEL_STUDIO_FOLDER_NAME = 'steelstudio'
 TRACK_PATH = ac.getFolder(ac.FolderID.ContentTracks) .. "\\" .. ac.getTrackID()
 TRACK_EXTENSION_PATH = TRACK_PATH .. "\\extension\\"
 STEEL_STUDIO_FOLDER_PATH = TRACK_EXTENSION_PATH .. STEEL_STUDIO_FOLDER_NAME
-
-
 
 
 ---------- LOGS ------------
@@ -36,6 +38,10 @@ FOUND_LOCATIONS_FILE = nil
 
 LOCATIONS = {}
 FETCHED_LOCATIONS = false
+
+INITIALIZED_CARS = false
+CARS = {}
+SELECTED_CAR = 1
 
 ---------- BACKGROUNDS ----------
 

@@ -114,6 +114,31 @@ function saveLocations()
   --saveState.saved = true
 end
 
+function saveObjects()
+  --local bckName = "Steelstudio" .. ".json"
+  --io.copyFile(extensionPath .. "empty.json", extensionPath .. bckName)
+
+  local file = io.open(OBJECTS_FILE_PATH, "w")
+
+  if file then
+    logFile(LOGS_FILE_PATH, 'Save Objects: Existing file, writing changes')
+
+    local content = deepcopy(OBJECTS)
+
+    ac.debug("CONTENT", content)
+    file:write(json.encode(content))
+    file:close()
+  end
+
+
+
+
+  ui.toast(ui.Icons.Confirm, "Locations file saved!")
+  --forceReload()
+  --saveState.saved = true
+end
+
+
 function saveTheme(themeContent)
   --local bckName = "Steelstudio" .. ".json"
   --io.copyFile(extensionPath .. "empty.json", extensionPath .. bckName)
@@ -262,6 +287,7 @@ local function themesTab()
 
   ui.sameLine(0, 8)
 
+  ui.pushStyleColor(ui.StyleColor.Button, COLOR_GREEN)
   if ui.button("Save current theme") then
     local currTheme = deepcopy(CURRENT_THEME)
     currTheme.theme = newThemeLabel
@@ -269,6 +295,7 @@ local function themesTab()
     table.insert(LOADED_THEMES, currTheme)
     saveTheme(currTheme)
   end
+  ui.popStyleColor()
 
   ac.debug("input", newThemeLabel)
 
@@ -358,17 +385,36 @@ end
 
 local function teleportTab()
   -- don't show location settings if there is no current theme
+
+  
+
+
   if not LOCATIONS then
     ui.text("No locations found for current track. ")
     return
-  else
+  else if not physics.allowed() then
+    ui.text("Can't teleport cars in current session mode. Currently, it's only allowed in Practice Mode. ")
+    return
+    else
+    
+      local carName = CARS[SELECTED_CAR]:name()
+      
+      ui.combo("Teleport Car", carName, function()
+        for k, v in pairs(CARS) do
+          if ui.selectable(v:name()) then
+            SELECTED_CAR = v.index + 1
+          end
+        end
+      end)
+
+
     local locationsIdx = "Point " .. #LOCATIONS + 1
 
     inputstring = ui.inputText("Location name... " .. locationsIdx, locationsIdx, ui.InputTextFlags.Placeholder)
 
     ui.sameLine(0, 8)
 
-    if ui.button("Save current location") then
+    if ui.button("Add location", vec2(ui.availableSpaceX(), 0)) then
       errors.inputLocation = ''
       local currentPosition = dump(car.position)
       ac.debug("Car pos X", currentPosition)
@@ -393,7 +439,7 @@ local function teleportTab()
     for k, item in pairs(LOCATIONS) do
       local position = stringToVec3(item['position'])
       local look = stringToVec3(item['look'])
-      if ui.button(item['name']) then teleportCar(position, look) end
+      if ui.button(item['name']) then teleportCar(position, look, SELECTED_CAR - 1) end
     end
 
 
@@ -401,11 +447,14 @@ local function teleportTab()
     if ui.button('Teleport to Hotlap Start') then physics.teleportCarTo(0, ac.SpawnSet.HotlapStart) end
     if ui.button('Teleport to Pits') then physics.teleportCarTo(0, ac.SpawnSet.Pits) end
 
-    if ui.button('Flip Car Direction') then teleportCar(carPosition, -carLook) end
+    if ui.button('Flip Car Direction') then teleportCar(carPosition, -carLook, SELECTED_CAR - 1) end
 
-    if ui.button("Save Locations") then
-      saveLocations()
-    end
+      ui.pushStyleColor(ui.StyleColor.Button, COLOR_GREEN)
+      if ui.button("Save Locations") then
+        saveLocations()
+      end
+      ui.popStyleColor()
+  end
   end
 end
 
@@ -413,6 +462,8 @@ local function objectsTab()
 
 
 
+  -- show/hide objects depending on enabled flag
+  --TODO: meshNames is table. iterate over the table
   for k, mesh in pairs(OBJECTS) do
     local foundMesh = ac.findMeshes(mesh['meshNames'][1])
     if not mesh['enabled'] then
@@ -425,11 +476,12 @@ local function objectsTab()
   
   
   if #OBJECTS == 0 then
-    ui.text("No objects controller found for current track. ")
+    ui.text("No objects controller found for current track.")
     return
   else
     ui.text("Objects:")
 
+    -- for every object, add a checkbox to allow changing enabled flag
     for k, v in pairs(OBJECTS) do
       local meshes = ac.findMeshes(v['meshNames'][1])
       ac.debug("FOUND MESHES", meshes)
@@ -438,6 +490,13 @@ local function objectsTab()
         OBJECTS[k]['enabled'] = not OBJECTS[k]['enabled']
       end
     end
+
+    ui.pushStyleColor(ui.StyleColor.Button, COLOR_GREEN)
+    if ui.button("Save Objects") then
+      saveObjects()
+    end
+    ui.popStyleColor()
+
   end
   ac.debug("OBJECTS", OBJECTS)
 end
@@ -659,6 +718,13 @@ function script.windowMain(dt)
   if not INITIALIZED_AUDIO then
     InitializeAudio()
     INITIALIZED_AUDIO = true
+  end
+
+  if not INITIALIZED_CARS then
+    for i, c in ac.iterateCars() do
+      table.insert(CARS, i, c)
+    end
+    INITIALIZED_CARS = true
   end
 
 
