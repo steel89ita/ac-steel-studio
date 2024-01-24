@@ -265,7 +265,7 @@ end
 
 local function themesTab()
   ui.textWrapped(
-    '"Themes" are a collection of backgrounds, car positions and possibly other stuff.')
+    '"Themes" are collections of backgrounds. Choose and save your themes here.')
 
 
 
@@ -311,7 +311,7 @@ local function themesTab()
       CURRENT_THEME = deepcopy(item)
     end
     ui.sameLine(0, 8)
-    if ui.button(item['theme'] .. "X") then
+    if ui.button("X") then
       ui.modalPopup('Delete ' .. item['theme'], 'Are you sure to delete the selected theme?', function(okPressed)
         if okPressed then
           table.remove(LOADED_THEMES, k)
@@ -597,7 +597,9 @@ end
 
 
 local function aboutTab()
-  ui.text('Steel Studio v.0.1')
+    ui.text('Steel Studio. Made by SteelRacing, aka steel89ita.')
+    ui.text('All rights reserved.')
+  ui.text('https://github.com/steel89ita/ac_steel_studio')
   --ui.text('physics late: ' .. ac.getSim().physicsLate)
   ui.text('CPU occupancy: ' .. ac.getSim().cpuOccupancy)
   --ui.text('CPU time: ' .. ac.getSim().cpuTime)
