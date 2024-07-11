@@ -1,3 +1,5 @@
+![banner](steelstudio_banner.jpg)
+
 # Steel Studio - Assetto Corsa LUA App
 
 Steel Studio takes your customization experience to the next level, offering intuitive tools and features that give you complete control over your showroom environment. Whether you want to tweak the lighting, modify the backdrop, or highlight specific elements, Steel Studio provides the flexibility and precision needed to bring your vision to life.
